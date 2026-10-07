@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "policyId": "blueprint-os:universal-century-grade",
+  "policyVersion": "1.2.0",
+  "projectId": "project:hardware-simulation",
+  "posture": "LOCAL_CORE",
+  "canonicalAuthority": {
+    "circuitSimulation": "local-engine",
+    "firmwareSimulation": "local-engine-or-local-toolchain",
+    "projectArtifacts": "portable-local-files",
+    "remoteCompute": "optional-acceleration-only"
+  },
+  "dependencies": [
+    {
+      "id": "local-simulation-engine",
+      "class": "LOCAL_CORE",
+      "costClass": "local-free",
+      "purpose": "Circuit, GPIO/PWM/ADC/sensor simulation and engineering workflows",
+      "dataBoundary": "local project/runtime",
+      "offlineBehavior": "Core simulation remains usable offline",
+      "exitPath": "Portable project/netlist/config formats"
+    },
+    {
+      "id": "unity-or-remote-renderer",
+      "class": "OPTIONAL_PUBLISH",
+      "costClass": "optional",
+      "purpose": "Optional high-quality visualization/rendering path",
+      "dataBoundary": "Scene/model exports only",
+      "offlineBehavior": "Simulation engine remains usable without renderer",
+      "exitPath": "Renderer remains downstream of portable simulation state"
+    },
+    {
+      "id": "google-drive-or-equivalent",
+      "class": "OPTIONAL_SYNC",
+      "costClass": "free-or-optional-paid",
+      "purpose": "Optional project backup/export archive",
+      "dataBoundary": "Portable project artifacts only",
+      "offlineBehavior": "No effect on simulation correctness",
+      "exitPath": "Ordinary files can be copied to another provider"
+    },
+    {
+      "id": "ai-provider",
+      "class": "OPTIONAL_INTELLIGENCE",
+      "costClass": "optional",
+      "purpose": "Optional explanation/code/design assistance",
+      "dataBoundary": "Explicitly supplied project context only",
+      "offlineBehavior": "Simulation and project editing remain usable",
+      "exitPath": "Provider replaceable"
+    }
+  ],
+  "forbidden": [
+    "cloud-required-basic-simulation",
+    "remote-renderer-as-simulation-truth",
+    "ai-owned-electrical-model-truth",
+    "mandatory-paid-provider-for-core-simulation"
+  ]
+}
