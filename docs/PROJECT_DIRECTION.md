@@ -20,3 +20,12 @@ Các bản V1–V5 chứng minh được nhiều phần logic quan trọng: thao
 3. `unity-client/` — 3D renderer, interaction, camera, snapping, measurement UI.
 4. `assets/` — model/texture/material PBR.
 5. `archive/` hoặc `prototypes/` — giữ nguyên các thử nghiệm lịch sử.
+
+
+## Dependency posture
+
+Future work follows Constitution 1.2:
+
+`LOCAL SIMULATION CORE → OPTIONAL RENDERER/AI/SYNC`
+
+The simulation engine and canonical electrical/project state remain local and portable. Remote rendering, cloud compute, Google Drive and AI providers may be added only as replaceable adapters with explicit exit paths. They must not become hidden prerequisites for basic simulation.
