@@ -1,0 +1,45 @@
+{
+  "schemaVersion": "1.0.0",
+  "kind": "app-constitution-adoption-evidence",
+  "status": "SOURCE_AUDIT_CANDIDATE",
+  "projectId": "project:hardware-simulation",
+  "blueprintLevel": "B2",
+  "scope": "SOURCE_POLICY_INHERITANCE_ONLY",
+  "sourceAuthority": {
+    "repo": "BlueDragon33/Software-Blueprint-Hub",
+    "policyId": "blueprint-os:universal-century-grade",
+    "version": "1.3.0",
+    "isNewRatification": false
+  },
+  "baseCommit": "aa67a20b4078b4b14b48a2bc9124e42a337dccb5",
+  "retainedRequirements": {
+    "allSevenPillars": true,
+    "zeroWaivers": true,
+    "localFirst": true,
+    "productionAuthority": "separate-explicit-release-gate",
+    "posture": "LOCAL_CORE",
+    "canonicalDataNoRequiredCloud": true
+  },
+  "sourcePaths": [
+    ".blueprint/constitution-adoption.json",
+    ".blueprint/dependency-budget.json",
+    "README.md",
+    "prototypes",
+    "tools",
+    "docs"
+  ],
+  "unverified": [
+    "Identify executable local engine build rather than treating archived prototypes as a runnable product",
+    "Real offline circuit GPIO/ADC/PWM simulation and numerical engine verification",
+    "Portable netlist/project roundtrip and representative simulator usability test"
+  ],
+  "release": {
+    "offlineRuntime": "UNVERIFIED",
+    "productAcceptance": "UNVERIFIED",
+    "independentReview": "PENDING",
+    "remotePublication": "DISABLED_BY_ECOSYSTEM_DEFAULT",
+    "userWorkstationInstalled": false,
+    "productionAuthorized": false
+  },
+  "note": "Real evidence is restricted to checked source contracts and reviewed CI. This is not approval of actual functionality, user acceptance or a release."
+}
