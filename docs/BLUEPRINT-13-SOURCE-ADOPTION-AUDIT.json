@@ -24,14 +24,15 @@
     ".blueprint/constitution-adoption.json",
     ".blueprint/dependency-budget.json",
     "README.md",
-    "prototypes",
+    "archive",
     "tools",
     "docs"
   ],
   "unverified": [
     "Identify executable local engine build rather than treating archived prototypes as a runnable product",
     "Real offline circuit GPIO/ADC/PWM simulation and numerical engine verification",
-    "Portable netlist/project roundtrip and representative simulator usability test"
+    "Portable netlist/project roundtrip and representative simulator usability test",
+    "README mentions prototypes/ and visual/ root directories, but neither exists in the current repository root; do not claim those prototypes or a working simulator are present."
   ],
   "release": {
     "offlineRuntime": "UNVERIFIED",
