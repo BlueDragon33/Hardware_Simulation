@@ -22,7 +22,7 @@ Các thư mục `prototypes/` chứa tiến trình V1–V5; `visual/` chứa cá
 
 ## Operational sovereignty
 
-Hardware_Simulation adopts **Universal Constitution 1.2.0** at **B2**.
+Hardware_Simulation inherits **Universal Constitution 1.3.0** as its source-level governance contract (not online-release or product acceptance) at **B2**.
 
 Default posture: **LOCAL_CORE**.
 
@@ -33,3 +33,10 @@ Default posture: **LOCAL_CORE**.
 - A paid/cloud runtime must not become mandatory for basic simulation when the local engine can satisfy the requirement.
 
 Canonical dependency posture: `.blueprint/dependency-budget.json`.
+
+
+## Verified adoption boundaries
+
+- Chỉ xác nhận **source contracts** và CI theo đúng commit. Không đồng nhất biểu mẫu Hiến pháp với chứng cứ ứng dụng đã chạy offline.
+- Chính sách Blueprint OS mặc định **offline-local-only**; GitHub merge hoặc CI PASS không được tự publish online. Ngoại lệ Bơi Ếch không áp dụng cho repo này.
+- Bằng chứng các kiểm thử thực tế còn thiếu được ghi tại `docs/BLUEPRINT-13-SOURCE-ADOPTION-AUDIT.json`. Việc nghiệm thu chức năng, lưu/khôi phục và review vẫn phải thực hiện trước khi công nhận Product PASS.
