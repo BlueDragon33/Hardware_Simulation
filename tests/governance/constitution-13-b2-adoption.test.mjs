@@ -35,7 +35,7 @@ test("local sovereignty remains canonical with optional adapters, no new externa
  for(const id of ["cloud-required-basic-simulation","remote-renderer-as-simulation-truth","ai-owned-electrical-model-truth"])assert.ok(forbidden.has(id),"critical prohibition: "+id);
 });
 test("source-level file checks are real, but cannot substitute executable offline test",()=>{
- for(const path of ["prototypes","visual","tools","docs"])assert.equal(existsSync(path),true,"missing observed source: "+path);
+ for(const path of ["archive","tools","docs"])assert.equal(existsSync(path),true,"missing observed source: "+path);
  const readme=readFileSync("README.md","utf8");
  assert.match(readme,/Virtual Hardware|Electronics Lab/);
  assert.match(readme,/LOCAL_CORE/);
@@ -52,6 +52,8 @@ test("adoption receipt is source scoped; no offline or product PASS from a manif
  assert.equal(audit.release.userWorkstationInstalled,false);
  assert.equal(audit.retainedRequirements.allSevenPillars,true);
  assert.equal(audit.retainedRequirements.zeroWaivers,true);
- assert.equal(audit.unverified.length,3);
+ assert.equal(audit.unverified.length,4);
+ assert.equal(existsSync("prototypes"),false);
+ assert.equal(existsSync("visual"),false);
  for(const path of audit.sourcePaths)assert.equal(existsSync(path),true,"audit source missing: "+path);
 });
