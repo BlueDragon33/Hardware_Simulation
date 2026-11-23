@@ -1,0 +1,224 @@
+{
+  "schema": "hardware-simulation.qa.offline-chromium.v1",
+  "checkedAt": "2026-11-23T21:20:40.237298+00:00",
+  "sessionLocalDate": "2026-11-24",
+  "repository": "BlueDragon33/Hardware_Simulation",
+  "mainObserved": "fbd57ee106b5e55081bcafbeb7204b8b5a4fb823",
+  "pr6Observed": "7bd10a234448d9f905f762ddb7dc2486d43706d7",
+  "pr7Observed": "6aeb73416a18f15c2e8001a6ba58182619ffc67d",
+  "workPackage": 4,
+  "constitution": "blueprint-os:universal-century-grade@1.3.0 ACTIVE",
+  "blueprintLevel": "B2",
+  "sourceBundleSHA256": "293048a4f5b50e1848202838ca8028f108e9df1022ea40c746122401178c8b6f",
+  "chromiumVersion": "144.0.7559.96",
+  "environment": "ChatGPT Linux container, /usr/bin/chromium, Python Playwright standard headless launch; browser policy not overridden",
+  "origin": "http://127.0.0.1:<ephemeral>",
+  "externalAccessRule": "intercept non-local requests only; no external network",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      800,
+      900
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "status": "BLOCKED_BY_BROWSER_POLICY",
+  "matrix": [
+    {
+      "entrypoint": "prototypes/v5_mna_solver/index.html",
+      "width": 1440,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1e22cbcebd9c468ba947e0f635c47bf52a30daea58655194b0b07af2524ea27c"
+    },
+    {
+      "entrypoint": "prototypes/v5_mna_solver/index.html",
+      "width": 800,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1e22cbcebd9c468ba947e0f635c47bf52a30daea58655194b0b07af2524ea27c"
+    },
+    {
+      "entrypoint": "prototypes/v5_mna_solver/index.html",
+      "width": 390,
+      "height": 844,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1e22cbcebd9c468ba947e0f635c47bf52a30daea58655194b0b07af2524ea27c"
+    },
+    {
+      "entrypoint": "visual/3d_offline_prototype/index.html",
+      "width": 1440,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "7143e940a50e44ae1bbedd6fc3ca1dc0892b82061124e0c230fdf66476fd1133"
+    },
+    {
+      "entrypoint": "visual/3d_offline_prototype/index.html",
+      "width": 800,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "7143e940a50e44ae1bbedd6fc3ca1dc0892b82061124e0c230fdf66476fd1133"
+    },
+    {
+      "entrypoint": "visual/3d_offline_prototype/index.html",
+      "width": 390,
+      "height": 844,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "7143e940a50e44ae1bbedd6fc3ca1dc0892b82061124e0c230fdf66476fd1133"
+    },
+    {
+      "entrypoint": "visual/3d_threejs_prototype/index.html",
+      "width": 1440,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1ffc1db7e032694a329e55c90383396be3d1d862c1a7e5cdf0d4403d3a6f6cc6"
+    },
+    {
+      "entrypoint": "visual/3d_threejs_prototype/index.html",
+      "width": 800,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1ffc1db7e032694a329e55c90383396be3d1d862c1a7e5cdf0d4403d3a6f6cc6"
+    },
+    {
+      "entrypoint": "visual/3d_threejs_prototype/index.html",
+      "width": 390,
+      "height": 844,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1ffc1db7e032694a329e55c90383396be3d1d862c1a7e5cdf0d4403d3a6f6cc6"
+    },
+    {
+      "entrypoint": "visual/visual_prototype_1/index.html",
+      "width": 1440,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1a92c3e7ad0e5e668f2e1cab20109ad2e6c76104d8486273af73c0ae3643ba6c"
+    },
+    {
+      "entrypoint": "visual/visual_prototype_1/index.html",
+      "width": 800,
+      "height": 900,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1a92c3e7ad0e5e668f2e1cab20109ad2e6c76104d8486273af73c0ae3643ba6c"
+    },
+    {
+      "entrypoint": "visual/visual_prototype_1/index.html",
+      "width": 390,
+      "height": 844,
+      "httpViaPython": 200,
+      "browserNavigation": "ERR_BLOCKED_BY_ADMINISTRATOR",
+      "appCodeExecuted": false,
+      "appScreenshot": false,
+      "pageErrorEvidence": "Not measurable: page failed before entry",
+      "sourceSHA256": "1a92c3e7ad0e5e668f2e1cab20109ad2e6c76104d8486273af73c0ae3643ba6c"
+    }
+  ],
+  "staticAssets": [
+    {
+      "entrypoint": "prototypes/v5_mna_solver/index.html",
+      "bytes": 33091,
+      "sha256": "1e22cbcebd9c468ba947e0f635c47bf52a30daea58655194b0b07af2524ea27c",
+      "externalRefs": [],
+      "offlineThirdPartyDependency": false
+    },
+    {
+      "entrypoint": "visual/3d_offline_prototype/index.html",
+      "bytes": 19207,
+      "sha256": "7143e940a50e44ae1bbedd6fc3ca1dc0892b82061124e0c230fdf66476fd1133",
+      "externalRefs": [],
+      "offlineThirdPartyDependency": false
+    },
+    {
+      "entrypoint": "visual/3d_threejs_prototype/index.html",
+      "bytes": 20371,
+      "sha256": "1ffc1db7e032694a329e55c90383396be3d1d862c1a7e5cdf0d4403d3a6f6cc6",
+      "externalRefs": [
+        "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js"
+      ],
+      "offlineThirdPartyDependency": true
+    },
+    {
+      "entrypoint": "visual/visual_prototype_1/index.html",
+      "bytes": 22399,
+      "sha256": "1a92c3e7ad0e5e668f2e1cab20109ad2e6c76104d8486273af73c0ae3643ba6c",
+      "externalRefs": [],
+      "offlineThirdPartyDependency": false
+    }
+  ],
+  "archiveTests": {
+    "cmd": "python -m unittest discover -s tests/archive -p 'test_*.py' -v",
+    "passed": 6,
+    "failed": 0,
+    "environment": "Python 3.13.5 local mirror"
+  },
+  "httpServer": {
+    "host": "127.0.0.1",
+    "allFour200": true
+  },
+  "screenshots": {
+    "browserErrorAt800x900": true,
+    "browserErrorAt390x844": true,
+    "browserErrorAt1440x900": false,
+    "reasonAt1440": "Page.captureScreenshot: Unable to capture screenshot",
+    "notApplicationScreenshots": true
+  },
+  "authority": {
+    "qaGate": "BLOCKED",
+    "G0": "PARTIAL/BLOCKED",
+    "G1": "BLOCKED",
+    "noMerge": true,
+    "noPublish": true,
+    "noPolicyBypass": true
+  },
+  "nextAction": "Authorized Windows/Chromium offline QA only after verifying live SHA and local artifact; capture actual UI screenshots and interactions or report one policy blocker"
+}
