@@ -119,9 +119,9 @@ def run():
                                 if page.locator("#state").count():
                                     record["state_after_run"] = page.locator("#state").inner_text()
                             if "v5_mna" in path:
-                                record["solver_after_run"] = page.locator("#solver").inner_text()
-                                record["probe_ch1"] = page.locator("#ch1v").inner_text()
-                                record["probe_ch2"] = page.locator("#ch2v").inner_text()
+                                record["solver_after_run"] = page.locator("#pwmv").inner_text()
+                                record["probe_ch1"] = page.locator("#nodev").inner_text()
+                                record["probe_ch2"] = page.locator("#adcv").inner_text()
                             elif "visual_prototype_1" in path:
                                 before = page.locator("#scene").get_attribute("style") or ""
                                 box = page.locator("#viewport").bounding_box()
@@ -153,6 +153,8 @@ def run():
                                 record["status"] = "BLOCKED_EXTERNAL_RUNTIME_DEPENDENCY"
                             elif errors:
                                 record["status"] = "RUNTIME_JAVASCRIPT_ERROR"
+                            elif "v5_mna" in path and record.get("solver_after_run") != "MNA OK":
+                                record["status"] = "SIMULATION_SOLVER_NOT_OK"
                             elif not record.get("state_after_run", "").endswith("RUNNING"):
                                 record["status"] = "RUNTIME_STATE_NOT_RUNNING"
                             else:
@@ -163,12 +165,22 @@ def run():
                             record["screenshot"] = name
                             record["actual_app_screenshot"] = True
                     except Exception as exc:
-                        record["status"] = "BROWSER_OR_INTERACTION_BLOCKED"
                         record["exception"] = str(exc).splitlines()[0]
+                        app_loaded = record.get("http_status") == 200
+                        record["navigation_succeeded"] = app_loaded
+                        record["status"] = (
+                            "BLOCKED_EXTERNAL_RUNTIME_DEPENDENCY" if external else
+                            "INTERACTION_OR_QA_ASSERTION_FAILED" if app_loaded else
+                            "BROWSER_NAVIGATION_BLOCKED"
+                        )
                         try:
-                            name = "browser_error_" + path.replace("/", "_") + f"_{width}x{height}.png"
+                            name = ("app_error_" if app_loaded else "browser_error_") + path.replace("/", "_") + f"_{width}x{height}.png"
                             page.screenshot(path=str(OUT / name), full_page=False, timeout=4000)
-                            record["diagnostic_only_screenshot"] = name
+                            if app_loaded:
+                                record["screenshot"] = name
+                                record["actual_app_screenshot"] = True
+                            else:
+                                record["diagnostic_only_screenshot"] = name
                         except Exception as shot_exc:
                             record["screenshot_error"] = str(shot_exc).splitlines()[0]
                     finally:
