@@ -1,0 +1,44 @@
+name: HS-G0-001 Windows Chromium offline QA (evidence-only)
+
+on:
+  push:
+    branches:
+      - qa/hs-g0-001-offline-chromium-20261124
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hardware-g0-windows-qa
+  cancel-in-progress: true
+
+jobs:
+  chromium-windows:
+    name: Windows real-browser offline smoke (not product acceptance)
+    if: ${{ ! github.event.repository.private }}
+    runs-on: windows-2025
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install test-only browser tooling
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.56.0
+          python -m playwright install chromium
+      - name: Run 4x3 actual Chromium test (fail-closed)
+        shell: pwsh
+        run: python tests/runtime/windows_offline_qa.py
+      - name: Preserve actual screenshots, errors and environment
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HS-G0-001-windows-chromium-evidence
+          path: tests/runtime_output/
+          if-no-files-found: warn
+          retention-days: 3
