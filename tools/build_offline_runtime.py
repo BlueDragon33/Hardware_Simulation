@@ -113,6 +113,17 @@ def main():
             if html.count(OLD_CDN) != 1:
                 raise SystemExit("BLOCKED: unexpected legacy Three.js dependency reference")
             html = html.replace(OLD_CDN, NEW_BUNDLE)
+            # Replace only the visual geometry span of the verified historical HTML.
+            start = "// ESP32\nconst esp="
+            end = "// Current particles"
+            if html.count(start) != 1 or html.count(end) != 1:
+                raise SystemExit("BLOCKED: historical geometry boundary drift")
+            lo = html.index(start)
+            hi = html.index(end, lo)
+            p1 = (ROOT / "tools" / "hardware_reference_geometry.js").read_text(encoding="utf-8")
+            if "</script" in p1.lower():
+                raise SystemExit("BLOCKED: invalid P1 visual source")
+            html = html[:lo] + p1 + "\n\n" + html[hi:]
         elif OLD_CDN in html:
             raise SystemExit("BLOCKED: unexpected remote Three.js dependency in " + site)
         if html.count("</head>") != 1 or html.count("</body>") != 1:
@@ -159,8 +170,11 @@ def main():
         "keyboardCamera": "vendor/keyboard-camera.js",
         "keyboardCameraKinds": ["canvas", "three", "css"],
         "visualFraming": "vendor/visual-framing-labels.js",
+        "hardwareReference": "DOIT_30_PIN_REFERENCE_ONLY",
+        "modelProvenance": "hardware-reference-provenance.json",
         "entrypoints": emitted,
     }
+    shutil.copyfile(ROOT / "docs" / "hardware-reference-provenance.json", DIST / "hardware-reference-provenance.json")
     (DIST / "runtime-manifest.json").write_text(
         json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     print("LOCAL_RUNTIME_PREPARED", len(emitted), "sourceSHA256", digest)
