@@ -3,13 +3,16 @@
 "use strict";
 const host=document.getElementById("viewport");
 if(!host||!window.THREE||!lab||!camera||!renderer)throw Error("V01: real Three.js scene missing");
-const parts=[["GPIO2","ESP32 GPIO2",esp,pcb],["R1","R1 220Ω",res,res],["C1","C1 100µF",cap,cap],["OUT","NODE OUT",led,led]];
+const parts=[["GPIO2","D2 / GPIO2",d2Anchor,pcb],["R1","R1 220Ω",res,res],["C1","C1 100µF",cap,cap],["OUT","NODE OUT",led,led]];
 const oldSprites=labels;
+let focusedPart=null;
 const style=document.createElement("style");
 style.id="hsV01CSS";
 style.textContent=[
 ".hs-v01-layer{position:absolute;inset:0;z-index:5;pointer-events:none}.hs-v01-layer[hidden]{display:none!important}",
-".hs-v01-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.hs-v01-svg line{stroke:#73cde9;stroke-width:1.3;stroke-dasharray:3 5}",
+".hs-v01-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}.hs-v01-svg line{stroke:#73cde9;stroke-width:1;stroke-dasharray:3 5;opacity:.76}",
+".viewport .hud{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.viewport .hud .card{min-width:0;padding:6px 7px;backdrop-filter:none}.viewport .hud .card b{font-size:12px}.viewport .hud .card span{margin-bottom:1px}.viewport .tip,.viewport .inspector{backdrop-filter:none}",
+"@media(max-width:600px){.viewport .hud{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:4px!important}.viewport .hud .card:nth-child(n+3){display:block!important}.viewport .hud .card{padding:4px 5px!important}.viewport .hud .card b{font-size:11px}.viewport .hud .card span{font-size:9px}}",
 ".hs-v01-badge{position:absolute;height:34px;padding:5px 7px;border:1px solid #56a8d6;border-radius:7px;background:rgba(3,15,27,.96);color:#ebf6ff;font:700 12px/20px system-ui,sans-serif;white-space:nowrap;text-align:center;overflow:hidden;text-overflow:ellipsis;pointer-events:auto;cursor:pointer}",
 ".hs-v01-badge:focus-visible,.hs-v01-picker:focus-visible{outline:3px solid #74e6da;outline-offset:1px}.hs-v01-picker{position:absolute;display:none;height:34px;pointer-events:auto;background:#0b2438;color:#eaf7ff;border:1px solid #56a8d6;border-radius:7px;font:600 12px system-ui,sans-serif}",
 "@media(max-width:600px){.hs-v01-picker{display:block}}"
@@ -19,13 +22,13 @@ const svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.class
 const picker=document.createElement("select");picker.id="hsVisualPicker";picker.className="hs-v01-picker";picker.setAttribute("aria-label","Chọn linh kiện để xem nhãn Engineering");
 parts.forEach((p,i)=>{const opt=document.createElement("option");opt.value=String(i);opt.textContent=p[1];picker.appendChild(opt)});layer.appendChild(picker);
 const widgets=parts.map((p,i)=>{
- const btn=document.createElement("button");btn.className="hs-v01-badge";btn.type="button";btn.textContent=p[1];btn.dataset.componentId=p[0];
- btn.onclick=()=>{picker.value=String(i);selectedObject=p[3];showInspect(p[3]);updateLabels()};layer.appendChild(btn);
+ const btn=document.createElement("button");btn.className="hs-v01-badge";btn.type="button";btn.textContent=p[1];btn.dataset.componentId=p[0];btn.title="Tập trung linh kiện · Reset Camera hoặc Esc để trở lại";btn.setAttribute("aria-label",p[1]+" · Tập trung linh kiện");
+ btn.onclick=()=>{picker.value=String(i);selectedObject=p[3];showInspect(p[3]);focusPart(i)};layer.appendChild(btn);
  const line=document.createElementNS("http://www.w3.org/2000/svg","line");line.dataset.componentId=p[0];svg.appendChild(line);return {btn,line};
 });host.appendChild(layer);
-picker.onchange=()=>{const o=parts[Number(picker.value)][3];selectedObject=o;showInspect(o);updateLabels()};
+picker.onchange=()=>{const i=Number(picker.value),o=parts[i][3];selectedObject=o;showInspect(o);if(focusedPart!==null)focusPart(i);else updateLabels()};
 const bb=new THREE.Box3();
-function points(){lab.updateWorldMatrix(true,true);bb.setFromObject(lab);if(bb.isEmpty())throw Error("V01: empty lab bounds");
+function points(object=lab){lab.updateWorldMatrix(true,true);bb.setFromObject(object);if(bb.isEmpty())throw Error("V01: empty lab bounds");
  const p=[];for(const x of [bb.min.x,bb.max.x])for(const y of [bb.min.y,bb.max.y])for(const z of [bb.min.z,bb.max.z])p.push(new THREE.Vector3(x,y,z));return p;}
 function project(pts,w,h){camera.updateMatrixWorld(true);let l=Infinity,r=-Infinity,t=Infinity,b=-Infinity;
  for(const p of pts){const q=p.clone().project(camera);if(!Number.isFinite(q.x)||!Number.isFinite(q.y)||q.z< -1||q.z>1)return {valid:false};
@@ -67,8 +70,9 @@ function safe(){const w=host.clientWidth,h=host.clientHeight,mobile=w<=600,contr
  if(right-left<90||bottom-top<80)throw Error("V01: insufficient visible scene area");
  return {w,h,mobile,left,right,top,bottom,bandTop};}
 let fitInfo=null,visibleLabels=[];
-function fit(){if(!host.clientWidth)return;const s=safe(),pts=points();
- target.copy(bb.getCenter(new THREE.Vector3()));dist=Math.max(14,Math.min(70,dist));
+function fit(part=null){if(!host.clientWidth)return;focusedPart=part;host.dataset.hsInspection=part===null?"overview":parts[part][0];const rawSafe=safe(),s=part===null?rawSafe:{...rawSafe,left:rawSafe.left+8,right:rawSafe.right-8,top:rawSafe.top+8,bottom:rawSafe.bottom-8},pts=points(part===null?lab:parts[part][3]);
+ target.copy(bb.getCenter(new THREE.Vector3()));
+ if(part===null){dist=Math.max(14,Math.min(70,dist))}else{yaw=0;pitch=1.15;dist=Math.max(.8,bb.getSize(new THREE.Vector3()).length()*.9)}
  let box=null,attempts=0;
  for(let i=0;i<25;i++){attempts=i+1;camera.clearViewOffset();updateCamera();const raw=project(pts,s.w,s.h);
  if(!raw.valid){dist*=1.4;continue}
@@ -77,8 +81,9 @@ function fit(){if(!host.clientWidth)return;const s=safe(),pts=points();
  if(box.valid&&box.left>=s.left-.2&&box.right<=s.right+.2&&box.top>=s.top-.2&&box.bottom<=s.bottom+.2)break;
  dist=Math.min(110,dist*(box.valid?Math.max(box.width/(s.right-s.left),box.height/(s.bottom-s.top),1.05):1.5)*1.04);
  }
- fitInfo={attempts,dist,box,safe:s};if(window.__hsCameraQA?.syncInitial)window.__hsCameraQA.syncInitial();
+ fitInfo={attempts,dist,box,safe:s};if(part===null&&window.__hsCameraQA?.syncInitial)window.__hsCameraQA.syncInitial();
  updateLabels();}
+function focusPart(i){if(!Number.isInteger(i)||i<0||i>=parts.length)return;fit(i);document.getElementById("hudCam").textContent="Focus "+parts[i][0]}
 function anchor(obj,w,h){obj.updateWorldMatrix(true,false);const p=obj.getWorldPosition(new THREE.Vector3()).project(camera);return {x:(p.x+1)*w/2,y:(1-p.y)*h/2}}
 function updateLabels(){if(!engineering||layer.hidden||!host.clientWidth)return;
  const s=safe(),w=s.w,h=s.h,gap=8;
@@ -89,7 +94,7 @@ function updateLabels(){if(!engineering||layer.hidden||!host.clientWidth)return;
    &&r.left>s.left+20&&r.selector!=="#hsVisualPicker");
  const availableRight=Math.min(s.right,...blocking.map(r=>r.left-8));
  const availableWidth=availableRight-s.left;
- const compact=s.mobile||availableWidth<390;
+ const compact=focusedPart!==null||s.mobile||availableWidth<390;
  const ids=compact?[Number(picker.value)]:[0,1,2,3];
  picker.style.left="8px";picker.style.top=s.bandTop+"px";
  picker.style.width=Math.min(144,w-171)+"px";
@@ -97,7 +102,7 @@ function updateLabels(){if(!engineering||layer.hidden||!host.clientWidth)return;
  svg.setAttribute("viewBox","0 0 "+w+" "+h);const bw=compact?Math.min(165,w-170):Math.min(145,(availableWidth-3*gap)/4);
  const sorted=ids.map(i=>({i,p:anchor(parts[i][2],w,h)})).sort((a,b)=>a.p.x-b.p.x);
  const rects=[];sorted.forEach((o,j)=>{
- const x=compact?Math.max(160,Math.min(w-bw-8,availableRight-bw)):
+ const x=compact?Math.max(160,Math.min(w-bw-8,availableRight-bw,focusedPart!==null?Math.max(160,o.p.x-bw/2):Infinity)):
    s.left+j*(availableWidth-bw)/Math.max(1,sorted.length-1),
    y=s.bandTop,e=widgets[o.i];
  const rect={id:parts[o.i][0],left:x,right:x+bw,top:y,bottom:y+34};rects.push(rect);
@@ -107,21 +112,26 @@ function updateLabels(){if(!engineering||layer.hidden||!host.clientWidth)return;
  });widgets.forEach((e,i)=>{if(!ids.includes(i)){e.btn.hidden=true;e.btn.style.display="none";e.line.style.display="none"}});
  visibleLabels=rects;}
 const original=setEngineering;
-setEngineering=function(v){original(v);oldSprites.forEach(x=>x.visible=false);layer.hidden=!v;if(v)updateLabels()};
+setEngineering=function(v){original(v);oldSprites.forEach(x=>x.visible=false);layer.hidden=!v;if(!v&&focusedPart!==null)document.getElementById("btnResetCam").click();if(v)updateLabels()};
 const reset=document.getElementById("btnResetCam").onclick;
 document.getElementById("btnResetCam").onclick=()=>{reset();fit()};
-let queued=false;window.addEventListener("resize",()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;fit()})},{passive:true});
+const topButton=document.getElementById("btnTop"),originalTop=topButton.onclick;
+topButton.onclick=()=>{originalTop();fit()};
+// Close-up zoom may go below the historical overview minimum. Preserve the original listener outside inspection.
+document.getElementById("gl").addEventListener("wheel",event=>{if(focusedPart===null)return;event.preventDefault();event.stopImmediatePropagation();dist=Math.max(.8,Math.min(24,dist+event.deltaY*Math.max(.001,dist*.0008)));updateCamera()},{capture:true,passive:false});
+let queued=false;window.addEventListener("resize",()=>{if(queued)return;queued=true;requestAnimationFrame(()=>{queued=false;fit(focusedPart)})},{passive:true});
 function refresh(){if(engineering)updateLabels();requestAnimationFrame(refresh)}requestAnimationFrame(refresh);
 fit();
 Object.defineProperty(window,"__hsVisualQA",{configurable:false,writable:false,value:Object.freeze({
- fit,select(i){if(!Number.isInteger(i)||i<0||i>=parts.length)throw Error("V01: bad label index");picker.value=String(i);updateLabels()},
+ fit,exitFocus(){if(focusedPart===null)return false;document.getElementById("btnResetCam").click();return true},isFocused(){return focusedPart!==null},select(i){if(!Number.isInteger(i)||i<0||i>=parts.length)throw Error("V01: bad label index");picker.value=String(i);updateLabels()},
  getMetrics(){const s=safe(),box=project(points(),s.w,s.h),
  labels=activeLabelRects(),controlRects=floatingRects(),
  // Measure *actual* DOM rectangles (not the cached intended coordinates)
  // for every visible badge versus every visible independent floating panel.
  labelPanelOverlaps=labels.flatMap(x=>controlRects.filter(y=>intersect(x,y))
    .map(y=>({label:x.id,panel:y.id,selector:y.selector,labelRect:x,panelRect:y})));
- return {box,safe:s,labels,labelOverlap:labels.some((x,i)=>labels.slice(i+1).some(y=>intersect(x,y))),
+ const focusBox=focusedPart===null?null:project(points(parts[focusedPart][3]),s.w,s.h);
+ return {box,safe:s,focusedPart:focusedPart===null?null:parts[focusedPart][0],focusBox,labels,labelOverlap:labels.some((x,i)=>labels.slice(i+1).some(y=>intersect(x,y))),
  controlRects,labelPanelOverlaps,
  labelsHitControls:labelPanelOverlaps.length>0,
  hardwareFullyVisible:box.valid&&box.left>=s.left-.5&&box.right<=s.right+.5&&box.top>=s.top-.5&&box.bottom<=s.bottom+.5,

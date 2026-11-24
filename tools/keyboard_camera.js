@@ -58,6 +58,7 @@
     const arrows=["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"];
     if(!arrows.includes(key)&&!["=","+","-","_","Escape"].includes(key))return false;
     if(key==="Escape"){
+      if(kind==="three"&&window.__hsVisualQA?.exitFocus())return true;
       setCamera({...initial});
       const hud=document.getElementById("hudCam");
       if(hud)hud.textContent="Orbit";
@@ -90,7 +91,7 @@
     }else{
       const closer=key==="+"||key==="=";
       if(kind==="css")n.scale=clamp(n.scale*(closer?1.10:1/1.10),.65,1.45);
-      else n.dist=clamp(n.dist*(closer?.90:1/.90),kind==="three"?5.5:6,24);
+      else n.dist=clamp(n.dist*(closer?.90:1/.90),kind==="three"?(window.__hsVisualQA?.isFocused()?.8:5.5):6,24);
     }
     setCamera(n);return true;
   }

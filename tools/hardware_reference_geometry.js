@@ -32,13 +32,13 @@ const hsP1 = (() => {
   function printPlane(parent,w,d,y,draw,width,height){
     const c=document.createElement('canvas');c.width=width;c.height=height;
     draw(c.getContext('2d'),width,height);
-    const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;
+    const texture=new T.CanvasTexture(c);texture.colorSpace=T.SRGBColorSpace;texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
     const o=new T.Mesh(new T.PlaneGeometry(w,d),new T.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-1}));
     o.rotation.x=-Math.PI/2;o.position.y=y;parent.add(o);return o;
   }
-  const metal=material(0xc7cbd0,.78,.32),gold=material(0xc6a04b,.72,.36),
-        black=material(0x242831,.03,.8),pcbMat=material(0x102d2b,.08,.52),
-        solder=material(0x9ca5ab,.65,.38),abs=material(0xe7e8e2,0,.81),
+  const metal=material(0xd0d8df,.32,.38),gold=material(0xe1b75a,.35,.42),
+        black=material(0x353c45,.02,.72),pcbMat=material(0x25584d,.03,.68),
+        solder=material(0xaeb9c1,.34,.42),abs=material(0xe7e8e2,0,.81),
         socketDark=material(0x252a30,.12,.72);
   const esp=new T.Group();esp.position.set(-4.7,.05,0);lab.add(esp);
   const pcb=selectable(new T.Group(),'ESP32 DevKit V1 · Reference','MCU board','GPIO2');esp.add(pcb);
@@ -51,6 +51,11 @@ const hsP1 = (() => {
     pins.push({id,target:id==='D2'?'GPIO2':null,mm:[mmX,mmY],p:[(mmX-14.1)*unit,.34,(mmY-26.5)*unit],s:[.064,.34,.064]});
   }));
   const pinMesh=batch(pcb,cube,gold,pins,'30-pin header');
+  // Derive the D2 leader anchor from the actual rendered instance transform.
+  const d2Index=pins.findIndex(p=>p.id==='D2'), d2Matrix=new T.Matrix4();
+  pinMesh.getMatrixAt(d2Index,d2Matrix);
+  const d2Anchor=new T.Object3D();d2Anchor.name='GPIO2 / D2 pin tip';
+  d2Anchor.position.set(0,.5,0).applyMatrix4(d2Matrix);pinMesh.add(d2Anchor);
   pinMesh.userData.instanceIds=pins.map(p=>p.id);
   batch(pcb,cube,black,pins.map(p=>({p:[p.p[0],.22,p.p[2]],s:[.21,.12,.21]})),'header insulators');
   batch(pcb,cube,solder,pins.map(p=>({p:[p.p[0],.166,p.p[2]],s:[.23,.012,.23]})),'solder pads');
@@ -71,10 +76,12 @@ const hsP1 = (() => {
   block(pcb,material(0x303742),0,.28,2.674,.48,.045,.012);
   for(const x of [-.78,.78]){block(pcb,metal,x,.23,1.93,.42,.12,.40);round(pcb,black,x,.315,1.93,.12,.07)}
   printPlane(pcb,2.82,5.3,.172,(ctx,w,h)=>{
-    ctx.clearRect(0,0,w,h);ctx.fillStyle='#e1e6dc';ctx.font='bold 39px sans-serif';ctx.textAlign='center';ctx.fillText('ESP32 DEVKIT V1',w/2,h*.63);
-    ctx.font='29px sans-serif';ctx.fillText('EN          BOOT',w/2,h*.82);ctx.fillText('REF • 30 PIN',w/2,h*.89);
-    ctx.font='bold 29px monospace';ctx.textBaseline='middle';
-    pins.forEach(p=>{ctx.textAlign=p.mm[0]<10?'left':'right';ctx.fillText(p.id.replace('GND.','GND'),p.mm[0]<10?w*.102:w*.898,p.mm[1]/53*h)});
+    ctx.clearRect(0,0,w,h);ctx.fillStyle='#ffffff';ctx.font='bold 39px sans-serif';ctx.textAlign='center';ctx.fillText('ESP32 DEVKIT V1',w/2,h*.68);
+    ctx.font='bold 34px sans-serif';ctx.fillText('EN          BOOT',w/2,h*.82);ctx.fillText('REF · 30 PIN',w/2,h*.89);
+    ctx.font='bold 43px monospace';ctx.textBaseline='middle';ctx.lineWidth=5;ctx.strokeStyle='#103c32';
+    pins.forEach(p=>{ctx.textAlign=p.mm[0]<10?'left':'right';const x=p.mm[0]<10?w*.115:w*.885,y=p.mm[1]/53*h;
+      const name=p.id.startsWith('GND.')?'GND':p.id;
+      ctx.fillStyle=p.id==='D2'?'#ffe68d':'#ffffff';ctx.strokeText(name,x,y);ctx.fillText(name,x,y)});
   },768,1440);
   const espLedMat=new T.MeshStandardMaterial({color:0x1750ac,emissive:0x347cff,emissiveIntensity:.15});
   block(pcb,espLedMat,.48,.245,.33,.13,.09,.10);
@@ -153,6 +160,9 @@ const hsP1 = (() => {
   // Avoid expensive transmission buffer / per-socket draw calls / dynamic shadows.
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
   renderer.shadowMap.enabled=false; // explicit low-cost lighting policy; no shadow quality claim
+  // Existing lights only: increase diffuse fill and soften the key, no extra pass.
+  scene.traverse(o=>{if(o.isHemisphereLight){o.intensity=2.1;o.groundColor.setHex(0x7c8794)}});
+  key.intensity=2.0;key.position.set(4,9,5);rim.intensity=9;
   const mmMatrix=new T.Matrix4(),pos=new T.Vector3();
   function entries(mesh,source){
     return source.map((s,i)=>{mesh.getMatrixAt(i,mmMatrix);pos.setFromMatrixPosition(mmMatrix);
@@ -173,6 +183,6 @@ const hsP1 = (() => {
       contactAuthority:'UNVERIFIED_CONTACT',drawPolicy:'instanced, shared geometry/material, DPR<=1.5, shadows disabled'};
     }
   }),writable:false,configurable:false});
-  return {esp,pcb,espLedMat,bb,base,res,cap,led,ledMat,ledLight,wires};
+  return {esp,pcb,espLedMat,bb,base,res,cap,led,ledMat,ledLight,wires,d2Anchor};
 })();
-const {esp,pcb,espLedMat,bb,base,res,cap,led,ledMat,ledLight,wires}=hsP1;
+const {esp,pcb,espLedMat,bb,base,res,cap,led,ledMat,ledLight,wires,d2Anchor}=hsP1;
