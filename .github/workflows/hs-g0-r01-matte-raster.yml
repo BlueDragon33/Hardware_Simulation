@@ -1,0 +1,60 @@
+name: HS-G0-R01 isolated matte material raster experiment
+on:
+  push:
+    branches:
+      - qa/hs-g0-r01-matte-raster-20261125
+permissions:
+  contents: read
+concurrency:
+  group: hs-g0-r01-matte-raster
+  cancel-in-progress: true
+jobs:
+  confirm:
+    if: ${{ ! github.event.repository.private }}
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 74ab9b217257ed000c33bac21fed0fca73741339
+          path: _matte_baseline
+      - uses: actions/checkout@v4
+        with:
+          ref: 2d6349a548abf711e942bb2d2e6f2de77d6dda41
+          path: _matte_current
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build exact unchanged runtime revisions
+        shell: pwsh
+        run: |
+          foreach ($item in @(@{dir='_matte_baseline';sha='74ab9b217257ed000c33bac21fed0fca73741339'},@{dir='_matte_current';sha='2d6349a548abf711e942bb2d2e6f2de77d6dda41'})) {
+            Push-Location $item.dir
+            try {
+              if ((git rev-parse HEAD) -ne $item.sha) { throw 'SHA_MISMATCH' }
+              npm ci --no-audit --no-fund
+              if ($LASTEXITCODE -ne 0) { throw 'INSTALL_FAIL' }
+              npm run build:offline
+              if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAIL' }
+              git diff --exit-code -- archive/source_bundle
+              if ($LASTEXITCODE -ne 0) { throw 'ARCHIVE_CHANGED' }
+            } finally { Pop-Location }
+          }
+      - name: Install same Chromium
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.56.0
+          python -m playwright install chromium
+      - name: Isolated ABS Lambert experiment and actual render measurement
+        run: python tests/acceptance/r01_matte_raster.py
+      - name: Preserve all samples and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HS-G0-R01-matte-raster
+          path: tests/matte_raster/
+          if-no-files-found: error
+          retention-days: 3
