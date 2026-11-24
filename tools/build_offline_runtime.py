@@ -36,7 +36,7 @@ MOBILE_CSS = """
   }
   .viewport .overlay button, .viewport > .toolbar button {
     display:block!important;width:100%!important;min-width:0!important;
-    min-height:39px!important;padding:8px 5px!important;
+    min-height:44px!important;padding:8px 5px!important;
     font-size:10px!important;white-space:normal!important;
   }
   .viewport {height:70svh!important;min-height:560px!important}
