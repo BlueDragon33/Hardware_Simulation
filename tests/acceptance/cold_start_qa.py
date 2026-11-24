@@ -147,7 +147,11 @@ def main():
                             run=page.locator("#run")
                             run.focus()
                             page.keyboard.press("Enter")
-                            page.wait_for_timeout(750)
+                            # Flash is async: await actual RUNNING state instead of a fixed sleep.
+                            page.wait_for_function(
+                                "() => document.querySelector('#state')?.textContent?.includes('RUNNING')",
+                                timeout=12000,
+                            )
                             case["keyboard_enter"]=page.locator("#state").inner_text().endswith("RUNNING")
                         name=source.replace("/","_").replace(".html","")+f"_{width}x{height}.png"
                         page.screenshot(path=str(OUTPUT/name),timeout=10000)
