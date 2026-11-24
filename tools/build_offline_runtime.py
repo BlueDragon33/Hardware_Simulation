@@ -36,7 +36,7 @@ MOBILE_CSS = """
   }
   .viewport .overlay button, .viewport > .toolbar button {
     display:block!important;width:100%!important;min-width:0!important;
-    min-height:39px!important;padding:8px 5px!important;
+    min-height:44px!important;padding:8px 5px!important;
     font-size:10px!important;white-space:normal!important;
   }
   .viewport {height:70svh!important;min-height:560px!important}
@@ -128,12 +128,17 @@ def main():
             'data-hs-camera-kind="' + camera_kind + '"></script>'
             if camera_kind else ""
         )
-        html = html.replace("</body>", MOBILE_SCRIPT + "\n" + camera_tag + "\n</body>")
+        visual_tag = (
+            '<script src="../../vendor/visual-framing-labels.js"></script>'
+            if site == "visual/3d_threejs_prototype" else ""
+        )
+        html = html.replace("</body>", MOBILE_SCRIPT + "\n" + camera_tag + "\n" + visual_tag + "\n</body>")
         (target / "index.html").write_text(html, encoding="utf-8")
         emitted.append(site + "/index.html")
     vendor_dir = DIST / "vendor"
     vendor_dir.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(ROOT / "tools" / "keyboard_camera.js", vendor_dir / "keyboard-camera.js")
+    shutil.copyfile(ROOT / "tools" / "visual_framing_labels.js", vendor_dir / "visual-framing-labels.js")
     (DIST / "index.html").write_text(
         '<!doctype html><html lang="vi"><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -153,6 +158,7 @@ def main():
         "historicalArchiveUnchanged": True,
         "keyboardCamera": "vendor/keyboard-camera.js",
         "keyboardCameraKinds": ["canvas", "three", "css"],
+        "visualFraming": "vendor/visual-framing-labels.js",
         "entrypoints": emitted,
     }
     (DIST / "runtime-manifest.json").write_text(

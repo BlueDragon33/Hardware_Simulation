@@ -39,7 +39,7 @@
     if(!finite(yaw,pitch,dist,target.x,target.y,target.z))throw Error("HS-CAMERA: invalid 3D state");
     return {yaw,pitch,dist,x:target.x,y:target.y,z:target.z};
   }
-  const initial=Object.freeze(state());
+  let initial=Object.freeze(state());
   let moves=0;
   const clamp=(v,lo,hi)=>Math.min(hi,Math.max(lo,v));
   function setCamera(n){
@@ -113,7 +113,8 @@
     configurable:false,enumerable:false,writable:false,
     value:Object.freeze({
       kind,getState:()=>Object.freeze(state()),initial:Object.freeze({...initial}),
-      focused:()=>document.activeElement===surface,keyboardMoves:()=>moves
+      focused:()=>document.activeElement===surface,keyboardMoves:()=>moves,
+      syncInitial:()=>{initial=Object.freeze(state());}
     })
   });
   status(false);
