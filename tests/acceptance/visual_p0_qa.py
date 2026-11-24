@@ -15,6 +15,70 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self,*a,**kw):super().__init__(*a,directory=str(SITE),**kw)
     def log_message(self,*a):pass
 
+def measured_panel_audit(page):
+    """Independent DOM viewport measurements, not the adapter's cached label values."""
+    return page.evaluate("""() => {
+      const selectors = [
+        '.viewport > *', '.viewport .overlay', '.viewport .tip',
+        '.viewport .inspector', '.viewport .help', '.viewport .inspect',
+        '.viewport .hud', '.side .toolbar', '#hsVisualPicker'
+      ];
+      const eligible=(el)=>{
+        const st=getComputedStyle(el),r=el.getBoundingClientRect();
+        return st.display!=='none'&&st.visibility!=='hidden'&&Number(st.opacity)!==0
+          &&r.width>0&&r.height>0&&!el.hidden;
+      };
+      const bounds=el=>{const r=el.getBoundingClientRect();return {
+        left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height
+      }};
+      const overlap=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+      const labels=[...document.querySelectorAll('.hs-v01-badge')].filter(eligible)
+        .map(el=>({name:el.dataset.componentId,rect:bounds(el)}));
+      const seen=new Set(),panels=[];
+      for(const selector of selectors)for(const el of document.querySelectorAll(selector)){
+        if(seen.has(el))continue;seen.add(el);
+        if(el.matches('canvas, .hs-v01-layer, .hs-v01-svg, .hs-v01-badge, script, style'))continue;
+        if(el.closest('.hs-v01-layer')&&el.id!=='hsVisualPicker')continue;
+        if(!eligible(el))continue;
+        panels.push({name:el.id||el.className||el.tagName,
+          selector:el.id?'#'+el.id:'.'+String(el.className).trim().split(/\\s+/)[0],
+          rect:bounds(el)});
+      }
+      const overlaps=labels.flatMap(l=>panels.filter(p=>overlap(l.rect,p.rect))
+        .map(p=>({label:l.name,panel:p.name,labelRect:l.rect,panelRect:p.rect})));
+      const labelPairs=labels.flatMap((l,i)=>labels.slice(i+1).filter(x=>overlap(l.rect,x.rect))
+        .map(x=>[l.name,x.name]));
+      return {labels,panels,overlaps,labelPairs,
+        inspectorVisible:panels.some(p=>p.selector==='.inspector'),
+        viewport:bounds(document.querySelector('#viewport'))};
+    }""")
+
+
+def negative_inspector_fixture(page):
+    """Prove the collision guard fails if an actual label covers Inspector."""
+    return page.evaluate("""() => {
+      const el=[...document.querySelectorAll('.hs-v01-badge')]
+        .find(n=>!n.hidden&&getComputedStyle(n).display!=='none');
+      const inspector=document.querySelector('.inspector'),host=document.querySelector('#viewport');
+      if(!el||!inspector)return {applicable:false};
+      const r=inspector.getBoundingClientRect(),h=host.getBoundingClientRect();
+      if(r.bottom<=h.top||r.top>=h.bottom||r.left>=h.right)return {applicable:false};
+      const previous={left:el.style.left,top:el.style.top};
+      try {
+        el.style.left=(r.left-h.left+5)+'px';
+        el.style.top=(r.top-h.top+5)+'px';
+        const e=el.getBoundingClientRect(),p=inspector.getBoundingClientRect();
+        const actuallyOverlaps=e.left<p.right&&e.right>p.left&&e.top<p.bottom&&e.bottom>p.top;
+        const metrics=window.__hsVisualQA.getMetrics();
+        return {applicable:true,actuallyOverlaps,
+          detected:metrics.labelPanelOverlaps.some(x=>x.selector==='.inspector'),
+          label:el.dataset.componentId,panel:'inspector'};
+      } finally {
+        el.style.left=previous.left;el.style.top=previous.top;
+      }
+    }""")
+
+
 def case_check(page,width,height):
     page.wait_for_function("() => !!window.__hsVisualQA && !!window.__hsCameraQA",timeout=15000)
     page.wait_for_timeout(220)
@@ -27,7 +91,18 @@ def case_check(page,width,height):
     assert metrics["engineering"] is True
     assert metrics["hardwareFullyVisible"],"Engineering model clipping: "+json.dumps(metrics)
     assert not metrics["labelOverlap"],"Overlapping Engineering labels"
-    assert not metrics["labelsHitControls"],"Labels cover HUD or control buttons"
+    assert not metrics["labelsHitControls"],"Labels cover floating panel: "+json.dumps(metrics["labelPanelOverlaps"])
+    audit=measured_panel_audit(page)
+    assert not audit["overlaps"],"Independent DOM panel intersection: "+json.dumps(audit["overlaps"])
+    assert not audit["labelPairs"],"Independent DOM label collision"
+    if width>=800:
+        assert audit["inspectorVisible"],"Inspector omitted/hidden from comprehensive QA"
+        assert any(p["selector"]==".inspector" for p in metrics["controlRects"]), "Adapter omitted Inspector"
+        negative=negative_inspector_fixture(page)
+        assert negative["applicable"] and negative["actuallyOverlaps"] and negative["detected"], (
+            "Collision detection did not catch intentional Inspector overlap: "+json.dumps(negative))
+    else:
+        negative={"applicable":False,"reason":"mobile Inspector moved below the viewport"}
     assert metrics["oldSpritesVisible"]==0,"Old sprite labels still drawn over hardware"
     assert len(metrics["labels"])==(1 if width<=600 else 4)
     for item in metrics["labels"]:
@@ -42,6 +117,9 @@ def case_check(page,width,height):
         chosen=page.evaluate("() => window.__hsVisualQA.getMetrics()")
         assert chosen["labels"][0]["id"]=="C1","Mobile label picker not applied"
         assert not chosen["labelOverlap"]
+        mobile_audit=measured_panel_audit(page)
+        assert not mobile_audit["overlaps"],"Mobile selected label covers a visible panel"
+        assert mobile_audit["labels"][0]["name"]=="C1"
         for button in page.locator(".overlay button").all():
             box=button.bounding_box()
             assert box and box["height"]>=44 and box["width"]>=44,"Mobile tap target too small"
@@ -56,7 +134,11 @@ def case_check(page,width,height):
     reset=page.evaluate("() => window.__hsVisualQA.getMetrics()")
     assert reset["hardwareFullyVisible"],"Reset did not restore framing: "+json.dumps(reset)
     assert not reset["labelOverlap"] and not reset["labelsHitControls"]
+    reset_audit=measured_panel_audit(page)
+    assert not reset_audit["overlaps"],"Reset caused Inspector/label overlap"
     return {"default":initial,"engineering":metrics,"after_reset":reset,
+            "independent_dom_audit":audit,"after_reset_dom_audit":reset_audit,
+            "negative_inspector_control":negative,
             "screenshot":name,"mobile_selected_label":("C1" if width<=600 else None)}
 
 def main():
