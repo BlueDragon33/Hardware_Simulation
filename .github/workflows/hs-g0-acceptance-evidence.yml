@@ -1,0 +1,82 @@
+name: HS-G0-001 acceptance evidence (NOT product acceptance)
+
+on:
+  push:
+    branches:
+      - qa/hs-g0-001-acceptance-closeout-20261124
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hs-g0-acceptance-evidence
+  cancel-in-progress: true
+
+jobs:
+  windows-acceptance:
+    runs-on: windows-2025
+    timeout-minutes: 18
+    steps:
+      - name: Checkout pinned candidate
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Generate npm dependency lock and verify clean install
+        shell: pwsh
+        run: |
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          $lock = Get-Content package-lock.json -Raw | ConvertFrom-Json
+          if ($lock.packages.'node_modules/three'.version -ne '0.161.0') { throw 'Wrong Three.js version' }
+          if ($lock.packages.'node_modules/esbuild'.version -ne '0.24.2') { throw 'Wrong esbuild version' }
+          Write-Host "LOCKED three=$($lock.packages.'node_modules/three'.version) esbuild=$($lock.packages.'node_modules/esbuild'.version)"
+      - name: Build offline runtime from SHA-pinned source
+        shell: pwsh
+        run: |
+          npm run build:offline
+          git diff --exit-code -- archive/source_bundle
+      - name: Verify bundled runtime regression
+        shell: pwsh
+        run: python -m unittest discover -s tests/runtime -p 'test_*.py' -v
+      - name: Record deterministic local Three.js rebuild
+        shell: pwsh
+        run: |
+          $a = (Get-FileHash runtime_dist/vendor/three-runtime.iife.js -Algorithm SHA256).Hash
+          node tools/bundle_three.mjs
+          $b = (Get-FileHash runtime_dist/vendor/three-runtime.iife.js -Algorithm SHA256).Hash
+          if ($a -ne $b) { throw "Non-deterministic local bundle" }
+          Write-Host "VENDOR_REBUILD_SHA256 $b"
+          $b | Out-File tests/vendor-rebuild.sha256 -Encoding ascii
+      - name: Install Playwright Chromium
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.56.0
+          python -m playwright install chromium
+      - name: Cold-start browser evidence (blocked gate is reported explicitly)
+        shell: pwsh
+        run: python tests/acceptance/cold_start_qa.py
+      - name: Upload lockfile and vendor hash
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HS-G0-lock-provenance
+          path: |
+            package-lock.json
+            tests/vendor-rebuild.sha256
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Upload 12 cold-start screenshots and JSON
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HS-G0-acceptance-evidence
+          path: tests/acceptance_output/
+          if-no-files-found: warn
+          retention-days: 3
