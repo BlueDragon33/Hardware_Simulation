@@ -1,0 +1,17 @@
+{
+  "name": "hardware-simulation-offline-runtime",
+  "version": "0.0.1",
+  "private": true,
+  "description": "G0 evidence-only bundler for historical ESP32 Visual Prototype",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build:offline": "python tools/rebuild_sources.py && python tools/build_offline_runtime.py && node tools/bundle_three.mjs",
+    "check:offline": "python -m unittest discover -s tests/runtime -p 'test_*.py' -v"
+  },
+  "dependencies": {
+    "three": "0.161.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2"
+  }
+}
