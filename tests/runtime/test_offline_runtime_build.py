@@ -20,7 +20,7 @@ class OfflineRuntime(unittest.TestCase):
     def test_historical_source_digest_unchanged(self):
         self.assertTrue(ZIP.is_file())
         self.assertEqual(hashlib.sha256(ZIP.read_bytes()).hexdigest(), EXPECTED)
-        self.assertEqual((OUT / ".hs-g0-generated-runtime").read_text(), EXPECTED)
+        self.assertEqual((OUT / ".hs-g0-generated-runtime").read_text(encoding="utf-8"), EXPECTED)
 
     def test_four_local_entrypoints_and_no_remote_three_dependency(self):
         for site in SITES:
@@ -33,12 +33,12 @@ class OfflineRuntime(unittest.TestCase):
                 self.assertIn("<canvas", html if "visual_prototype_1" not in site else "<canvas")
 
     def test_bundled_three_and_license_local(self):
-        html = (OUT / "visual/3d_threejs_prototype/index.html").read_text()
+        html = (OUT / "visual/3d_threejs_prototype/index.html").read_text(encoding="utf-8")
         self.assertIn("../../vendor/three-runtime.iife.js", html)
         bundle = OUT / "vendor" / "three-runtime.iife.js"
         self.assertGreater(bundle.stat().st_size, 200_000)
         self.assertTrue((OUT / "vendor" / "THREE-LICENSE.txt").is_file())
-        data = json.loads((OUT / "runtime-manifest.json").read_text())
+        data = json.loads((OUT / "runtime-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(data["threeVersion"], "0.161.0")
         self.assertEqual(data["historicalSourceSha256"], EXPECTED)
         self.assertEqual(len(data["entrypoints"]), 4)
@@ -50,7 +50,7 @@ class OfflineRuntime(unittest.TestCase):
             built = (OUT / site / "index.html").read_bytes()
             self.assertNotEqual(historical, built)
         old = (ROOT / "recovered_prototypes" /
-               "visual/3d_threejs_prototype/index.html").read_text()
+               "visual/3d_threejs_prototype/index.html").read_text(encoding="utf-8")
         self.assertIn("https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.min.js", old)
 
 
