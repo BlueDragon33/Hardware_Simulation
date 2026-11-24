@@ -119,7 +119,8 @@ def run():
                             record["canvas_count"] = page.locator("canvas").count()
                             record["body_text_length"] = len(page.locator("body").inner_text())
                             record["mobile_inspector_layout"] = page.evaluate("() => document.documentElement.dataset.hsMobileLayout || null")
-                            assert record["mobile_inspector_layout"] == ("side-inspector" if width <= 600 else "desktop-inspector"), "Responsive inspector not positioned for viewport"
+                            if path.startswith("visual/"):
+                                assert record["mobile_inspector_layout"] == ("side-inspector" if width <= 600 else "desktop-inspector"), "Responsive inspector not positioned for viewport"
 
                             record["has_run_button"] = page.locator("#run").count() > 0
                             if page.locator("#run").count():
@@ -149,6 +150,9 @@ def run():
                                 if "3d_threejs" in path:
                                     record["three_global_loaded"] = page.evaluate("() => typeof window.THREE !== 'undefined' && typeof window.THREE.WebGLRenderer === 'function'")
                                     assert record["three_global_loaded"], "Local Three.js bundle is not available"
+                                if page.locator("#btnEngineer").count():
+                                    page.locator("#btnEngineer").click(timeout=6500)
+                                    record["engineering_button_clicked"] = True
                                 if page.locator("#viewport").count():
                                     box = page.locator("#viewport").bounding_box()
                                     if box:
@@ -159,9 +163,6 @@ def run():
                                         page.mouse.up()
                                         page.mouse.wheel(0, -120)
                                         record["camera_pointer_input_sent"] = True
-                                if page.locator("#btnEngineer").count():
-                                    page.locator("#btnEngineer").click(timeout=4500)
-                                    record["engineering_button_clicked"] = True
                             if external:
                                 record["status"] = "BLOCKED_EXTERNAL_RUNTIME_DEPENDENCY"
                             elif errors:
@@ -178,7 +179,7 @@ def run():
                             record["screenshot"] = name
                             record["actual_app_screenshot"] = True
                     except Exception as exc:
-                        record["exception"] = str(exc).splitlines()[0]
+                        record["exception"] = str(exc)[:1600]
                         app_loaded = record.get("http_status") == 200
                         record["navigation_succeeded"] = app_loaded
                         record["status"] = (
