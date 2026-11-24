@@ -113,42 +113,43 @@ const hsP1 = (() => {
   },1536,870);
   const socketById=new Map(sockets.map(s=>[s.id,s]));
   const hole=id=>{const p=socketById.get(id).p;return [p[0],p[1],p[2]]};
-  const contacts=[];
+  const contacts=[],leadChecks=[],connectorChecks=[];
   function localEnd(component,id){const p=hole(id);contacts.push({component,id,status:'UNVERIFIED_CONTACT'});return p}
   const res=selectable(new T.Group(),'R1 · 220 Ω','Resistor','OUT');bb.add(res);
   const ra=localEnd('R1','E12'),rb=localEnd('R1','E15'),rx=(ra[0]+rb[0])/2;
   res.position.set(rx,.51,ra[2]);
   const body=round(res,material(0xd8bb86),0,0,0,.115,.58);body.rotation.z=Math.PI/2;
   for(const [x,col] of [[-.20,0xbb2529],[-.10,0xbb2529],[.02,0x75431e],[.20,0xcba74b]]){const b=round(res,material(col,.08,.55),x,0,0,.119,.045);b.rotation.z=Math.PI/2}
-  for(const p of [ra,rb]){const x=p[0]-rx;rod(res,metal,[Math.sign(x)*.29,0,0],[x,0,0]);rod(res,metal,[x,0,0],[x,p[1]-.51,0])}
+  for(const p of [ra,rb]){const x=p[0]-rx;rod(res,metal,[Math.sign(x)*.29,0,0],[x,0,0]);leadChecks.push({id:p===ra?'E12':'E15',component:'R1',mesh:rod(res,metal,[x,0,0],[x,p[1]-.51,0])})}
   const cap=selectable(new T.Group(),'C1 · 100 µF','Capacitor (illustrative body)','OUT');bb.add(cap);
   const ca=localEnd('C1','F19'),cb=localEnd('C1','F20'),cx=(ca[0]+cb[0])/2;cap.position.set(cx,.44,ca[2]);
   round(cap,material(0x214b80),0,.40,0,.25,.80);round(cap,metal,0,.815,0,.235,.035);
   // Type/polarity unverified: do not assert a particular polarized connection.
-  for(const p of [ca,cb])rod(cap,metal,[p[0]-cx,0,0],[p[0]-cx,p[1]-.44,0]);
+  for(const p of [ca,cb])leadChecks.push({id:p===ca?'F19':'F20',component:'C1',mesh:rod(cap,metal,[p[0]-cx,0,0],[p[0]-cx,p[1]-.44,0])});
   const led=selectable(new T.Group(),'LED1 · Red','LED','OUT');bb.add(led);
   const la=localEnd('LED1','F23'),lb=localEnd('LED1','F24'),lx=(la[0]+lb[0])/2;led.position.set(lx,.43,la[2]);
   const ledMat=new T.MeshStandardMaterial({color:0x9f1628,roughness:.24,metalness:0,emissive:0xff2445,emissiveIntensity:0});
   round(led,ledMat,0,.135,0,.255,.27);mesh(led,sphere,ledMat,0,.27,0,.25,.27,.25);round(led,ledMat,0,.02,0,.275,.055);
-  for(const p of [la,lb])rod(led,metal,[p[0]-lx,0,0],[p[0]-lx,p[1]-.43,0]);
+  for(const p of [la,lb])leadChecks.push({id:p===la?'F23':'F24',component:'LED1',mesh:rod(led,metal,[p[0]-lx,0,0],[p[0]-lx,p[1]-.43,0])});
   const ledLight=new T.PointLight(0xff334f,0,3);ledLight.position.set(0,.5,0);led.add(ledLight);
   const wires=[];
   function world(p,group){return new T.Vector3(...p).add(group.position)}
   const gpio=pins.find(p=>p.id==='D2');
   const a=world([gpio.p[0],.48,gpio.p[2]],esp),b=world(localEnd('J1','D12'),bb);
   const c=world(localEnd('J2','I24'),bb),d=world(localEnd('J2','RAIL4-22'),bb);
-  function connector(p,female){
+  function connector(p,female,id){
     const y=p.y+(female?.11:.13);
-    block(lab,black,p.x,y,p.z,.235,.25,.235);
+    const shell=block(lab,black,p.x,y,p.z,.235,.25,.235);
+    connectorChecks.push({id,mesh:shell,contact:p.clone(),female});
     if(!female)rod(lab,metal,[p.x,p.y,p.z],[p.x,y-.08,p.z],.025);
     return new T.Vector3(p.x,y+.125,p.z);
   }
-  function jumper(id,from,to,female,color){
-    const u=connector(from,female),v=connector(to,false),curve=new T.CatmullRomCurve3([u,u.clone().add(new T.Vector3(0,.55,0)),u.clone().lerp(v,.5).add(new T.Vector3(0,.95,0)),v.clone().add(new T.Vector3(0,.4,0)),v]);
+  function jumper(id,from,to,female,color,fromId,toId){
+    const u=connector(from,female,fromId),v=connector(to,false,toId),curve=new T.CatmullRomCurve3([u,u.clone().add(new T.Vector3(0,.55,0)),u.clone().lerp(v,.5).add(new T.Vector3(0,.95,0)),v.clone().add(new T.Vector3(0,.4,0)),v]);
     const w=new T.Mesh(new T.TubeGeometry(curve,32,.045,6,false),material(color,.03,.58));
     w.userData.curve=curve;w.userData.visualId=id;lab.add(w);wires.push(w);
   }
-  jumper('J1',a,b,true,0x367cce);jumper('J2',c,d,false,0x30343c);
+  jumper('J1',a,b,true,0x367cce,'D2','D12');jumper('J2',c,d,false,0x30343c,'I24','RAIL4-22');
   // Avoid expensive transmission buffer / per-socket draw calls / dynamic shadows.
   renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
   renderer.shadowMap.enabled=false; // explicit low-cost lighting policy; no shadow quality claim
@@ -158,7 +159,11 @@ const hsP1 = (() => {
       return {id:s.id,group:s.group||null,target:s.target||null,center:pos.toArray()}});
   }
   Object.defineProperty(window,'__hsP1QA',{value:Object.freeze({
-    geometry(){return {reference:'DOIT_30_PIN_REFERENCE_ONLY',mmPerWorldUnit:10,
+    geometry(){lab.updateWorldMatrix(true,true);
+      const checks=leadChecks.map(c=>{const expected=bb.localToWorld(new T.Vector3(...hole(c.id)));const actual=[-.5,.5].map(y=>c.mesh.localToWorld(new T.Vector3(0,y,0)));return {id:c.id,component:c.component,errorMm:Math.min(...actual.map(a=>a.distanceTo(expected)))*10}});
+      const anchors=connectorChecks.map(c=>{const expected=c.id==='D2'?a:world(hole(c.id),bb);return {id:c.id,errorMm:Math.hypot(c.mesh.position.x-expected.x,c.mesh.position.z-expected.z)*10,female:c.female}});
+      const picks=[0,149,299,300,399].map(i=>{const s=sockets[i],p=bb.localToWorld(new T.Vector3(s.p[0],.9,s.p[2]));const dir=new T.Vector3(0,-1,0);const hit=new T.Raycaster(p,dir).intersectObject(socketMesh,false)[0];return {expected:s.id,actual:hit?socketMesh.userData.instanceIds[hit.instanceId]:null}});
+      return {leadChecks:checks,connectorChecks:anchors,picks,reference:'DOIT_30_PIN_REFERENCE_ONLY',mmPerWorldUnit:10,
       boardSize:[boardBody.scale.x*10,boardBody.scale.z*10],
       moduleSize:[moduleBody.scale.x*10,moduleBody.scale.z*10],
       breadboardSize:[bbBody.scale.x*10,bbBody.scale.z*10],
