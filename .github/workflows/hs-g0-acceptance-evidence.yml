@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: hs-g0-acceptance-evidence
@@ -31,9 +31,9 @@ jobs:
       - name: Generate npm dependency lock and verify clean install
         shell: pwsh
         run: |
-          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          if (!(Test-Path package-lock.json)) { npm install --package-lock-only --ignore-scripts --no-audit --no-fund }
           npm ci --no-audit --no-fund
-          $lock = Get-Content package-lock.json -Raw | ConvertFrom-Json
+          $lock = Get-Content package-lock.json -Raw | ConvertFrom-Json -AsHashtable
           if ($lock.packages.'node_modules/three'.version -ne '0.161.0') { throw 'Wrong Three.js version' }
           if ($lock.packages.'node_modules/esbuild'.version -ne '0.24.2') { throw 'Wrong esbuild version' }
           Write-Host "LOCKED three=$($lock.packages.'node_modules/three'.version) esbuild=$($lock.packages.'node_modules/esbuild'.version)"
@@ -80,3 +80,22 @@ jobs:
           path: tests/acceptance_output/
           if-no-files-found: warn
           retention-days: 3
+      - name: Commit exact reviewed npm lockfile only to independent QA branch
+        if: ${{ success() && github.ref == 'refs/heads/qa/hs-g0-001-acceptance-closeout-20261124' }}
+        shell: pwsh
+        run: |
+          $tracked = git ls-files -- package-lock.json
+          if (!$tracked) {
+            $lock = Get-Content package-lock.json -Raw | ConvertFrom-Json -AsHashtable
+            if ($lock.packages.'node_modules/three'.version -ne '0.161.0') { throw 'Wrong Three.js lock version' }
+            if ($lock.packages.'node_modules/esbuild'.version -ne '0.24.2') { throw 'Wrong esbuild lock version' }
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -- package-lock.json
+            $staged = git diff --cached --name-only
+            if ($staged -ne 'package-lock.json') { throw "Unexpected staged files: $staged" }
+            git commit -m "build(lock): pin G0 offline runtime npm dependency graph"
+            git push origin HEAD:refs/heads/qa/hs-g0-001-acceptance-closeout-20261124
+          } else {
+            Write-Host 'Pinned lockfile exists; no commit necessary.'
+          }
