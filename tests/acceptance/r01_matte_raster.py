@@ -9,14 +9,20 @@ REFS={"baseline":"74ab9b217257ed000c33bac21fed0fca73741339","current":"2d6349a54
 # Three rotated blocks, two unmodified control conditions, one isolated intervention.
 ORDERS=[("baseline","current","matte"),("matte","baseline","current"),("current","matte","baseline")]
 SETUP="""mode=>{
+ const before=window.__hsVisualQA.getMetrics();
+ const cameraState=()=>({distance:dist,world:camera.matrixWorld.toArray(),projection:camera.projectionMatrix.toArray(),target:target.toArray()});
+ const beforeCamera=cameraState();
  const meshes=base.children.filter(o=>o.isMesh&&o.material?.isMeshStandardMaterial&&o.material.color.getHex()===0xe7e8e2);
  if(meshes.length!==2||meshes[0].material!==meshes[1].material)throw Error('Unexpected ABS targets');
  const old=meshes[0].material;
+ const meshState=()=>meshes.map(o=>({geometry:o.geometry.uuid,world:o.matrixWorld.toArray(),position:o.position.toArray(),scale:o.scale.toArray(),rotation:o.quaternion.toArray()}));
+ const beforeMeshes=meshState();
  if(mode==='matte'){
   const m=new THREE.MeshLambertMaterial({color:old.color,side:old.side,transparent:false,depthWrite:old.depthWrite,depthTest:old.depthTest});
   for(const o of meshes)o.material=m;
  }
- return {count:meshes.length,types:meshes.map(o=>o.material.type),geometry:meshes.map(o=>o.geometry.type),color:meshes[0].material.color.getHex(),distance:dist};
+ const after=window.__hsVisualQA.getMetrics();
+ return {before,after,beforeCamera,afterCamera:cameraState(),beforeMeshes,afterMeshes:meshState(),settings:{count:meshes.length,types:meshes.map(o=>o.material.type),geometry:meshes.map(o=>o.geometry.type),color:meshes[0].material.color.getHex(),distance:dist}};
 }"""
 # Instrument the same real render loop for every mode; do not replace or skip any draw.
 RENDER_SAMPLE="""async ()=>{
@@ -53,15 +59,19 @@ def measure(browser,origin,mode,block):
         page.locator("#btnEngineer").click()
         page.wait_for_function("() => window.__hsVisualQA.getMetrics().engineering")
         trace["stage"]="before_intervention"
-        before=page.evaluate("() => window.__hsVisualQA.getMetrics()")
-        trace["before"]=before
+        # One synchronous browser task: no animation callback can run between the
+        # before/after snapshots. Keep exact projection equality, no epsilon.
         trace["stage"]="intervention"
-        settings=page.evaluate(SETUP,mode)
+        transaction=page.evaluate(SETUP,mode)
+        before,after,settings=(transaction[k] for k in ("before","after","settings"))
+        trace["before"]=before
         trace["settings"]=settings
-        after=page.evaluate("() => window.__hsVisualQA.getMetrics()")
+        trace["cameraAndMeshInvariants"]={k:transaction[k] for k in ("beforeCamera","afterCamera","beforeMeshes","afterMeshes")}
+        assert transaction["beforeCamera"]==transaction["afterCamera"], "camera mutated by material experiment"
+        assert transaction["beforeMeshes"]==transaction["afterMeshes"], "geometry mutated by material experiment"
         trace["after"]=after
         trace["stage"]="projection_and_collision"
-        assert before["box"]==after["box"] and after["hardwareFullyVisible"] and not after["labelsHitControls"] and not after["labelOverlap"], "projection/collision assertion"
+        assert before["box"]==after["box"] and after["hardwareFullyVisible"] and not after["labelsHitControls"] and not after["labelOverlap"], "atomic projection/collision assertion"
         trace["stage"]="geometry"
         geometry_check(page.evaluate("() => window.__hsP1QA.geometry()"))
         page.wait_for_timeout(500)
@@ -77,7 +87,7 @@ def measure(browser,origin,mode,block):
         sample["renderCpuP95Ms"]=percentile(sample["renderCpuMs"],.95)
         assert not errors and not external and not failed,(errors,external,failed)
         name=f"{block+1}_{mode}.png";page.screenshot(path=str(OUT/name),timeout=15000)
-        return {"mode":mode,"block":block+1,"sample":sample,"settings":settings,"metrics":after,"screenshot":name,"errors":errors,"external":external,"failed":failed}
+        return {"mode":mode,"block":block+1,"sample":sample,"settings":settings,"atomicProjectionBefore":before["box"],"cameraAndMeshInvariants":trace["cameraAndMeshInvariants"],"metrics":after,"screenshot":name,"errors":errors,"external":external,"failed":failed}
     except Exception:
         trace["traceback"]=traceback.format_exc()
         trace["errors"]=errors;trace["external"]=external;trace["failed"]=failed
