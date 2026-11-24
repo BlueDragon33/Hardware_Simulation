@@ -128,10 +128,10 @@ def run():
                                 if page.locator("#state").count():
                                     record["state_after_run"] = page.locator("#state").inner_text()
                             if "v5_mna" in path:
-                                record["pwm_after_run"] = page.locator("#pwmv").inner_text()
+                                record["solver_indicator"] = page.locator("#pwmv").inner_text()
                                 record["node_voltage_after_run"] = page.locator("#nodev").inner_text()
                                 record["adc_after_run"] = page.locator("#adcv").inner_text()
-                                record["topology_state"] = page.locator("#netstate").inner_text()
+                                record["newton_iterations"] = page.locator("#netstate").inner_text()
                             elif "visual_prototype_1" in path:
                                 before = page.locator("#scene").get_attribute("style") or ""
                                 box = page.locator("#viewport").bounding_box()
@@ -166,8 +166,8 @@ def run():
                                 record["status"] = "BLOCKED_EXTERNAL_RUNTIME_DEPENDENCY"
                             elif errors:
                                 record["status"] = "RUNTIME_JAVASCRIPT_ERROR"
-                            elif "v5_mna" in path and record.get("topology_state") != "VALID":
-                                record["status"] = "TOPOLOGY_NOT_VALID"
+                            elif "v5_mna" in path and record.get("solver_indicator") != "MNA OK":
+                                record["status"] = "SOLVER_INDICATOR_NOT_OK"
                             elif not record.get("state_after_run", "").endswith("RUNNING"):
                                 record["status"] = "RUNTIME_STATE_NOT_RUNNING"
                             else:
