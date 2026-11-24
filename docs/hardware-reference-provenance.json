@@ -1,0 +1,55 @@
+{
+  "schema": "hs.g0.p1.visual-reference.v1",
+  "authority": "REFERENCE_ONLY",
+  "scale": {
+    "mmPerWorldUnit": 10
+  },
+  "board": {
+    "variant": "DOIT ESP32 DevKit V1 30-pin",
+    "outlineMm": [
+      28.2,
+      53
+    ],
+    "pitchMm": 2.54,
+    "source": "https://github.com/wokwi/wokwi-boards/blob/main/boards/esp32-devkit-v1/board.json",
+    "note": "Reference artwork coordinate facts only; not certified clone measurements. 30 header pins, not 30 GPIO signals."
+  },
+  "module": {
+    "envelopeMm": [
+      18,
+      25.5
+    ],
+    "source": "https://documentation.espressif.com/esp32-wroom-32_datasheet_en.html",
+    "note": "Illustrative envelope; exact module revision and height not verified."
+  },
+  "breadboard": {
+    "variant": "BB400 reference",
+    "envelopeMm": [
+      84,
+      47.6
+    ],
+    "pitchMm": 2.54,
+    "terminalCount": 300,
+    "railCount": 100,
+    "source": "https://www.mouser.com/datasheet/3/271/1/BPS-DAT-%28BB400%29-Datasheet.pdf"
+  },
+  "jumper": {
+    "pitchMm": 2.54,
+    "source": "https://www.pololu.com/product/3840/specs",
+    "electricalAuthority": "UNVERIFIED_CONTACT",
+    "note": "Visual terminal/socket choices illustrative. No netlist mutation or electrical correctness claimed."
+  },
+  "assets": {
+    "origin": "original procedural geometry and canvas silkscreen",
+    "copiedThirdPartyAssets": false,
+    "newDependencies": false
+  },
+  "renderBudget": {
+    "dprCap": 1.5,
+    "dynamicShadowMaps": false,
+    "transmissionPass": false,
+    "socketFloors": "one instanced mesh",
+    "deck": "one extruded mesh with 400 apertures",
+    "performanceAcceptance": "matched baseline/current same runner, reported frame intervals and draw calls; no physical GPU claim"
+  }
+}
