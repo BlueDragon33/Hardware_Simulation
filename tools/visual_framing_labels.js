@@ -32,13 +32,38 @@ function project(pts,w,h){camera.updateMatrixWorld(true);let l=Infinity,r=-Infin
  const x=(q.x+1)*w/2,y=(1-q.y)*h/2;l=Math.min(l,x);r=Math.max(r,x);t=Math.min(t,y);b=Math.max(b,y)}
  return {valid:true,left:l,right:r,top:t,bottom:b,width:r-l,height:b-t,cx:(l+r)/2,cy:(t+b)/2};}
 function local(el){if(!el||el.hidden||getComputedStyle(el).display==="none")return null;const a=el.getBoundingClientRect(),b=host.getBoundingClientRect();
- if(a.width<=0||a.height<=0||a.bottom<b.top||a.top>b.bottom)return null;
+ if(a.width<=0||a.height<=0||a.bottom<=b.top||a.top>=b.bottom||a.right<=b.left||a.left>=b.right)return null;
  return {left:a.left-b.left,right:a.right-b.left,top:a.top-b.top,bottom:a.bottom-b.top};}
 const intersect=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+const FLOATING_SELECTORS=[
+  ".overlay",".tip",".inspector",".help",".inspect",".hud",".toolbar",
+  "#hsCameraKeyboardStatus","#hsVisualPicker"
+];
+function floatingRects(){
+ const result=[];
+ for(const selector of FLOATING_SELECTORS){
+   for(const [i,el] of [...document.querySelectorAll(selector)].entries()){
+     const css=getComputedStyle(el),rect=local(el);
+     if(!rect||css.visibility==="hidden"||Number(css.opacity)===0)continue;
+     result.push({...rect,selector,id:el.id||selector+"["+i+"]"});
+   }
+ }
+ return result;
+}
+function activeLabelRects(){
+ return widgets.filter(w=>!w.btn.hidden&&getComputedStyle(w.btn).display!=="none")
+   .map(w=>({id:w.btn.dataset.componentId,...local(w.btn)}))
+   .filter(r=>Number.isFinite(r.left));
+}
 function safe(){const w=host.clientWidth,h=host.clientHeight,mobile=w<=600,controls=local(host.querySelector(".overlay")),
  focus=local(document.getElementById("hsCameraKeyboardStatus")),hud=local(host.querySelector(".hud"));
  const bandTop=Math.ceil(Math.max(74,...[controls,focus].filter(Boolean).map(x=>x.bottom))+8);
- const left=16,right=w-(w>=1000?244:16),top=bandTop+50,bottom=Math.min(h-12,hud?hud.top-14:h-14);
+ const inspector=local(host.querySelector(".inspector"));
+ // Inspector is a real overlay at 800px; unlike the old P0 test, keep both
+ // hardware framing and label rail to its left, with a 14px clearance.
+ const left=16,right=Math.min(w-(w>=1000?244:16),
+   inspector?inspector.left-14:Infinity),
+   top=bandTop+50,bottom=Math.min(h-12,hud?hud.top-14:h-14);
  if(right-left<90||bottom-top<80)throw Error("V01: insufficient visible scene area");
  return {w,h,mobile,left,right,top,bottom,bandTop};}
 let fitInfo=null,visibleLabels=[];
@@ -56,12 +81,25 @@ function fit(){if(!host.clientWidth)return;const s=safe(),pts=points();
  updateLabels();}
 function anchor(obj,w,h){obj.updateWorldMatrix(true,false);const p=obj.getWorldPosition(new THREE.Vector3()).project(camera);return {x:(p.x+1)*w/2,y:(1-p.y)*h/2}}
 function updateLabels(){if(!engineering||layer.hidden||!host.clientWidth)return;
- const s=safe(),w=s.w,h=s.h,ids=s.mobile?[Number(picker.value)]:[0,1,2,3],gap=8;
- picker.style.left="8px";picker.style.top=s.bandTop+"px";picker.style.width=Math.min(144,w-171)+"px";picker.style.display=s.mobile?"block":"none";
- svg.setAttribute("viewBox","0 0 "+w+" "+h);const bw=s.mobile?Math.min(165,w-170):Math.min(145,(s.right-s.left-3*gap)/4);
+ const s=safe(),w=s.w,h=s.h,gap=8;
+ // All visible floating panels are measured on each layout update. Inspector
+ // can extend into the old label rail even when badge-to-badge overlap is zero.
+ const y=s.bandTop;
+ const blocking=floatingRects().filter(r=>r.top<y+34&&r.bottom>y
+   &&r.left>s.left+20&&r.selector!=="#hsVisualPicker");
+ const availableRight=Math.min(s.right,...blocking.map(r=>r.left-8));
+ const availableWidth=availableRight-s.left;
+ const compact=s.mobile||availableWidth<390;
+ const ids=compact?[Number(picker.value)]:[0,1,2,3];
+ picker.style.left="8px";picker.style.top=s.bandTop+"px";
+ picker.style.width=Math.min(144,w-171)+"px";
+ picker.style.display=compact?"block":"none";
+ svg.setAttribute("viewBox","0 0 "+w+" "+h);const bw=compact?Math.min(165,w-170):Math.min(145,(availableWidth-3*gap)/4);
  const sorted=ids.map(i=>({i,p:anchor(parts[i][2],w,h)})).sort((a,b)=>a.p.x-b.p.x);
  const rects=[];sorted.forEach((o,j)=>{
- const x=s.mobile?Math.max(160,w-bw-8):s.left+j*(s.right-s.left-bw)/Math.max(1,sorted.length-1),y=s.bandTop,e=widgets[o.i];
+ const x=compact?Math.max(160,Math.min(w-bw-8,availableRight-bw)):
+   s.left+j*(availableWidth-bw)/Math.max(1,sorted.length-1),
+   y=s.bandTop,e=widgets[o.i];
  const rect={id:parts[o.i][0],left:x,right:x+bw,top:y,bottom:y+34};rects.push(rect);
  e.btn.hidden=false;e.btn.style.display="block";e.btn.style.left=x+"px";e.btn.style.top=y+"px";e.btn.style.width=bw+"px";
  e.line.style.display="block";e.line.setAttribute("x1",String(x+bw/2));e.line.setAttribute("y1",String(y+34));
@@ -77,10 +115,15 @@ function refresh(){if(engineering)updateLabels();requestAnimationFrame(refresh)}
 fit();
 Object.defineProperty(window,"__hsVisualQA",{configurable:false,writable:false,value:Object.freeze({
  fit,select(i){if(!Number.isInteger(i)||i<0||i>=parts.length)throw Error("V01: bad label index");picker.value=String(i);updateLabels()},
- getMetrics(){const s=safe(),box=project(points(),s.w,s.h),labels=visibleLabels.map(x=>({...x})),
- controlRects=[host.querySelector(".overlay"),document.getElementById("hsCameraKeyboardStatus"),host.querySelector(".hud")].map(local).filter(Boolean);
+ getMetrics(){const s=safe(),box=project(points(),s.w,s.h),
+ labels=activeLabelRects(),controlRects=floatingRects(),
+ // Measure *actual* DOM rectangles (not the cached intended coordinates)
+ // for every visible badge versus every visible independent floating panel.
+ labelPanelOverlaps=labels.flatMap(x=>controlRects.filter(y=>intersect(x,y))
+   .map(y=>({label:x.id,panel:y.id,selector:y.selector,labelRect:x,panelRect:y})));
  return {box,safe:s,labels,labelOverlap:labels.some((x,i)=>labels.slice(i+1).some(y=>intersect(x,y))),
- labelsHitControls:labels.some(x=>controlRects.some(y=>intersect(x,y))),
+ controlRects,labelPanelOverlaps,
+ labelsHitControls:labelPanelOverlaps.length>0,
  hardwareFullyVisible:box.valid&&box.left>=s.left-.5&&box.right<=s.right+.5&&box.top>=s.top-.5&&box.bottom<=s.bottom+.5,
  oldSpritesVisible:oldSprites.filter(x=>x.visible).length,engineering,fitInfo}}})});
 })();

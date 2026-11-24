@@ -1,0 +1,73 @@
+name: HS-G0-V02 full floating-panel collision QA
+
+on:
+  push:
+    branches:
+      - fix/hs-g0-v02-inspector-collision-20261124
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hs-g0-v02-inspector-collision
+  cancel-in-progress: true
+
+jobs:
+  inspector-windows:
+    if: ${{ ! github.event.repository.private }}
+    runs-on: windows-2025
+    timeout-minutes: 18
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build-time dependency integrity and syntax
+        shell: pwsh
+        run: |
+          npm ci --no-audit --no-fund
+          node --check tools/visual_framing_labels.js
+          node --check tools/keyboard_camera.js
+          python -m py_compile tests/acceptance/visual_p0_qa.py tests/acceptance/keyboard_camera_qa.py
+      - name: Build separately generated runtime from immutable source
+        shell: pwsh
+        run: |
+          npm run build:offline
+          git diff --exit-code -- archive/source_bundle
+      - name: Existing and generated-runtime unit regression
+        shell: pwsh
+        run: python -m unittest discover -s tests/runtime -p 'test_*.py' -v
+      - name: Install actual Chromium
+        shell: pwsh
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.56.0
+          python -m playwright install chromium
+      - name: Real 1440 800 390 framing + Inspector and all floating-panel collision measurements
+        shell: pwsh
+        run: python tests/acceptance/visual_p0_qa.py
+      - name: Nine real camera keyboard and mouse regressions
+        shell: pwsh
+        run: python tests/acceptance/keyboard_camera_qa.py
+      - name: Preserve collision metrics and unaltered screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HS-G0-V02-panel-collision-windows-evidence
+          path: tests/visual_output/
+          if-no-files-found: warn
+          retention-days: 3
+      - name: Preserve camera regression artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: HS-G0-V02-camera-regression
+          path: tests/camera_output/
+          if-no-files-found: warn
+          retention-days: 3
