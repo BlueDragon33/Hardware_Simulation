@@ -1,5 +1,5 @@
 """Isolated material experiment on unchanged PR16/17. Not product acceptance."""
-import hashlib,json,os,statistics,subprocess
+import hashlib,json,os,statistics,subprocess,traceback
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 from p1_r01_inspection_qa import PAGE,PIN,SAMPLE,percentile,start_server,geometry_check
@@ -44,21 +44,33 @@ def measure(browser,origin,mode,block):
         if r.request.url.startswith(origin+"/"):r.continue_()
         else:external.append(r.request.url);r.abort()
     ctx.route("**/*",route)
+    trace={"mode":mode,"block":block+1}
     try:
+        trace["stage"]="navigate"
         res=page.goto(origin+"/"+PAGE,wait_until="domcontentloaded",timeout=25000)
         assert res and res.status==200
         page.wait_for_function("() => !!window.__hsVisualQA && renderer.info.render.calls>0",timeout=25000)
         page.locator("#btnEngineer").click()
         page.wait_for_function("() => window.__hsVisualQA.getMetrics().engineering")
+        trace["stage"]="before_intervention"
         before=page.evaluate("() => window.__hsVisualQA.getMetrics()")
+        trace["before"]=before
+        trace["stage"]="intervention"
         settings=page.evaluate(SETUP,mode)
+        trace["settings"]=settings
         after=page.evaluate("() => window.__hsVisualQA.getMetrics()")
-        assert before["box"]==after["box"] and after["hardwareFullyVisible"] and not after["labelsHitControls"] and not after["labelOverlap"]
+        trace["after"]=after
+        trace["stage"]="projection_and_collision"
+        assert before["box"]==after["box"] and after["hardwareFullyVisible"] and not after["labelsHitControls"] and not after["labelOverlap"], "projection/collision assertion"
+        trace["stage"]="geometry"
         geometry_check(page.evaluate("() => window.__hsP1QA.geometry()"))
         page.wait_for_timeout(500)
+        trace["stage"]="render_measurement"
         sample=page.evaluate(RENDER_SAMPLE)
-        assert len(sample["intervals"])>=20 and len(sample["renderIntervals"])>=24
-        assert all(n>0 for n in sample["renderCalls"])
+        trace["sample"]=sample
+        trace["stage"]="render_sample_assertions"
+        assert len(sample["intervals"])>=20 and len(sample["renderIntervals"])>=24, "insufficient interval samples"
+        assert all(n>0 for n in sample["renderCalls"]), "render call count zero"
         sample["p95Ms"]=percentile(sample["intervals"],.95)
         sample["p50Ms"]=statistics.median(sample["intervals"])
         sample["renderP95Ms"]=percentile(sample["renderIntervals"],.95)
@@ -66,6 +78,13 @@ def measure(browser,origin,mode,block):
         assert not errors and not external and not failed,(errors,external,failed)
         name=f"{block+1}_{mode}.png";page.screenshot(path=str(OUT/name),timeout=15000)
         return {"mode":mode,"block":block+1,"sample":sample,"settings":settings,"metrics":after,"screenshot":name,"errors":errors,"external":external,"failed":failed}
+    except Exception:
+        trace["traceback"]=traceback.format_exc()
+        trace["errors"]=errors;trace["external"]=external;trace["failed"]=failed
+        (OUT/f"blocked_{block+1}_{mode}.json").write_text(json.dumps(trace,indent=2),encoding="utf8")
+        try:page.screenshot(path=str(OUT/f"blocked_{block+1}_{mode}.png"),timeout=15000)
+        except Exception:pass
+        raise
     finally:ctx.close()
 def main():
     OUT.mkdir(parents=True,exist_ok=True);servers=[];origins={}
@@ -99,7 +118,7 @@ def main():
           "benefit":m["p95"]<c["p95"] and m["actualRenderP95"]<c["actualRenderP95"],"originalGate":m["p95"]<=b["p95"]*1.1+3,"actualRenderGate":m["actualRenderP95"]<=b["actualRenderP95"]*1.1+3}
         report["gate"]="DIAGNOSTIC_COMPLETE"
         print("MATTE_SUMMARY",json.dumps({"summary":summary,"decision":report["decision"]}),flush=True)
-    except Exception as e:report["error"]=repr(e);print("MATTE_ERROR",repr(e),flush=True)
+    except Exception as e:report["error"]=repr(e);report["traceback"]=traceback.format_exc();print("MATTE_ERROR",report["traceback"],flush=True)
     finally:
         for srv in servers:srv.shutdown();srv.server_close()
         (OUT/"matte_report.json").write_text(json.dumps(report,indent=2),encoding="utf8")
