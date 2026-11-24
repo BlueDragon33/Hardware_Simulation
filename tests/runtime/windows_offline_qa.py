@@ -17,7 +17,7 @@ from urllib.request import urlopen
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "recovered_prototypes"
+SOURCE = ROOT / "runtime_dist"
 OUT = ROOT / "tests" / "runtime_output"
 EXPECTED_ZIP = "293048a4f5b50e1848202838ca8028f108e9df1022ea40c746122401178c8b6f"
 SCENARIOS = (
@@ -54,12 +54,18 @@ def run():
     try:
         manifest = (ROOT / "archive/source_bundle/SHA256SUMS.txt").read_text(encoding="ascii")
         assert manifest.split()[0] == EXPECTED_ZIP, "Unexpected source manifest SHA"
-        subprocess.run([sys.executable, str(ROOT / "tools/rebuild_sources.py")],
-                       cwd=ROOT, check=True, timeout=60)
+        # The guarded restore and runtime build run before browser QA.
         source_zip = ROOT / "archive/source_bundle/Hardware_Simulation_All_Prototypes_Source.zip"
         digest = hashlib.sha256(source_zip.read_bytes()).hexdigest()
         assert digest == EXPECTED_ZIP, "Rebuilt source archive does not match pinned SHA"
         report["actual_source_sha256"] = digest
+        vendor = SOURCE / "vendor" / "three-runtime.iife.js"
+        assert vendor.is_file() and vendor.stat().st_size > 200_000, "Bundled Three.js absent"
+        report["vendor_three_bytes"] = vendor.stat().st_size
+        manifest = json.loads((SOURCE / "runtime-manifest.json").read_text(encoding="utf-8"))
+        assert manifest["historicalSourceSha256"] == digest
+        assert manifest["threeVersion"] == "0.161.0"
+        report["runtime_manifest"] = manifest
         for path in SCENARIOS:
             assert (SOURCE / path).is_file(), "Missing restored entrypoint: " + path
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
@@ -112,6 +118,9 @@ def run():
                             record["title"] = page.title()
                             record["canvas_count"] = page.locator("canvas").count()
                             record["body_text_length"] = len(page.locator("body").inner_text())
+                            record["mobile_inspector_layout"] = page.evaluate("() => document.documentElement.dataset.hsMobileLayout || null")
+                            assert record["mobile_inspector_layout"] == ("side-inspector" if width <= 600 else "desktop-inspector"), "Responsive inspector not positioned for viewport"
+
                             record["has_run_button"] = page.locator("#run").count() > 0
                             if page.locator("#run").count():
                                 page.locator("#run").click(timeout=4500)
@@ -119,9 +128,10 @@ def run():
                                 if page.locator("#state").count():
                                     record["state_after_run"] = page.locator("#state").inner_text()
                             if "v5_mna" in path:
-                                record["solver_after_run"] = page.locator("#pwmv").inner_text()
-                                record["probe_ch1"] = page.locator("#nodev").inner_text()
-                                record["probe_ch2"] = page.locator("#adcv").inner_text()
+                                record["pwm_after_run"] = page.locator("#pwmv").inner_text()
+                                record["node_voltage_after_run"] = page.locator("#nodev").inner_text()
+                                record["adc_after_run"] = page.locator("#adcv").inner_text()
+                                record["topology_state"] = page.locator("#netstate").inner_text()
                             elif "visual_prototype_1" in path:
                                 before = page.locator("#scene").get_attribute("style") or ""
                                 box = page.locator("#viewport").bounding_box()
@@ -136,6 +146,9 @@ def run():
                                 page.locator("#engineering").click(timeout=4500)
                                 record["engineering_mode"] = page.locator("#hudMode").inner_text()
                             else:
+                                if "3d_threejs" in path:
+                                    record["three_global_loaded"] = page.evaluate("() => typeof window.THREE !== 'undefined' && typeof window.THREE.WebGLRenderer === 'function'")
+                                    assert record["three_global_loaded"], "Local Three.js bundle is not available"
                                 if page.locator("#viewport").count():
                                     box = page.locator("#viewport").bounding_box()
                                     if box:
@@ -153,8 +166,8 @@ def run():
                                 record["status"] = "BLOCKED_EXTERNAL_RUNTIME_DEPENDENCY"
                             elif errors:
                                 record["status"] = "RUNTIME_JAVASCRIPT_ERROR"
-                            elif "v5_mna" in path and record.get("solver_after_run") != "MNA OK":
-                                record["status"] = "SIMULATION_SOLVER_NOT_OK"
+                            elif "v5_mna" in path and record.get("topology_state") != "VALID":
+                                record["status"] = "TOPOLOGY_NOT_VALID"
                             elif not record.get("state_after_run", "").endswith("RUNNING"):
                                 record["status"] = "RUNTIME_STATE_NOT_RUNNING"
                             else:
