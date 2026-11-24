@@ -70,7 +70,7 @@ function safe(){const w=host.clientWidth,h=host.clientHeight,mobile=w<=600,contr
  if(right-left<90||bottom-top<80)throw Error("V01: insufficient visible scene area");
  return {w,h,mobile,left,right,top,bottom,bandTop};}
 let fitInfo=null,visibleLabels=[];
-function fit(part=null){if(!host.clientWidth)return;focusedPart=part;host.dataset.hsInspection=part===null?"overview":parts[part][0];const s=safe(),pts=points(part===null?lab:parts[part][3]);
+function fit(part=null){if(!host.clientWidth)return;focusedPart=part;host.dataset.hsInspection=part===null?"overview":parts[part][0];const rawSafe=safe(),s=part===null?rawSafe:{...rawSafe,left:rawSafe.left+8,right:rawSafe.right-8,top:rawSafe.top+8,bottom:rawSafe.bottom-8},pts=points(part===null?lab:parts[part][3]);
  target.copy(bb.getCenter(new THREE.Vector3()));
  if(part===null){dist=Math.max(14,Math.min(70,dist))}else{yaw=0;pitch=1.15;dist=Math.max(.8,bb.getSize(new THREE.Vector3()).length()*.9)}
  let box=null,attempts=0;
