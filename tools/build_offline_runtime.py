@@ -118,9 +118,22 @@ def main():
         if html.count("</head>") != 1 or html.count("</body>") != 1:
             raise SystemExit("BLOCKED: malformed runtime HTML: " + site)
         html = html.replace("</head>", MOBILE_CSS + "\n</head>")
-        html = html.replace("</body>", MOBILE_SCRIPT + "\n</body>")
+        camera_kind = {
+            "visual/3d_offline_prototype": "canvas",
+            "visual/3d_threejs_prototype": "three",
+            "visual/visual_prototype_1": "css",
+        }.get(site)
+        camera_tag = (
+            '<script src="../../vendor/keyboard-camera.js" '
+            'data-hs-camera-kind="' + camera_kind + '"></script>'
+            if camera_kind else ""
+        )
+        html = html.replace("</body>", MOBILE_SCRIPT + "\n" + camera_tag + "\n</body>")
         (target / "index.html").write_text(html, encoding="utf-8")
         emitted.append(site + "/index.html")
+    vendor_dir = DIST / "vendor"
+    vendor_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ROOT / "tools" / "keyboard_camera.js", vendor_dir / "keyboard-camera.js")
     (DIST / "index.html").write_text(
         '<!doctype html><html lang="vi"><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -138,6 +151,8 @@ def main():
         "bundle": "vendor/three-runtime.iife.js",
         "offlineRuntimeAfterBuild": True,
         "historicalArchiveUnchanged": True,
+        "keyboardCamera": "vendor/keyboard-camera.js",
+        "keyboardCameraKinds": ["canvas", "three", "css"],
         "entrypoints": emitted,
     }
     (DIST / "runtime-manifest.json").write_text(
