@@ -1,25 +1,30 @@
-name: HS-G0 FC02 targeted occlusion and control evidence
+name: HS-G0 FC02 remaining targeted evidence
 on:
   push:
     branches: [qa/hs-g0-fc02-offline-contrast-20261125]
 permissions:
   contents: read
 jobs:
-  targeted:
+  remaining:
     if: ${{ ! github.event.repository.private }}
     runs-on: windows-2025
-    timeout-minutes: 20
+    timeout-minutes: 12
     env:
-      HS_PRODUCT_SHA: ${{ github.sha }}
+      HS_PRODUCT_SHA: 3139c86301460d8d16db96867a0c1bb18023f206
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 3139c86301460d8d16db96867a0c1bb18023f206
+          path: exact-product
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Exact candidate build and affected static tests
+      - name: Exact product build for missing probes only
+        working-directory: exact-product
         shell: pwsh
         run: |
           if ((git rev-parse HEAD) -ne $env:HS_PRODUCT_SHA) { throw 'SHA_MISMATCH' }
@@ -27,18 +32,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'INSTALL_FAIL' }
           npm run build:offline
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAIL' }
-          python -m unittest discover -s tests/runtime -p 'test_offline_runtime_build.py' -v
-          if ($LASTEXITCODE -ne 0) { throw 'RUNTIME_FAIL' }
           git diff --exit-code -- archive/source_bundle
-      - name: Install browser and measurement tools
+      - name: Install measurement tools
         run: |
           python -m pip install playwright==1.56.0 pillow==11.3.0 numpy==2.2.6
           python -m playwright install chromium
-      - name: Targeted real occlusion and native control measurements
-        run: python tests/acceptance/fc02_targeted_qa.py
+      - name: Only missing CSS Top and mobile title probes
+        shell: pwsh
+        run: |
+          Copy-Item tests/acceptance/fc02_remaining_targeted_qa.py exact-product/tests/acceptance/
+          python exact-product/tests/acceptance/fc02_remaining_targeted_qa.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: HS-G0-FC02-targeted-evidence
-          path: tests/fc02_targeted/
+          name: HS-G0-FC02-remaining-targeted
+          path: exact-product/tests/fc02_remaining_targeted/
           retention-days: 3
