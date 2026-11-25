@@ -1,0 +1,97 @@
+name: HS-G0 FC02 remaining evidence
+on:
+  push:
+    branches: [qa/hs-g0-fc02-offline-contrast-20261125]
+permissions:
+  contents: read
+jobs:
+  os-offline:
+    if: ${{ ! github.event.repository.private }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      HS_PRODUCT_SHA: 779c79904b1dada88873c742fd118e944658268c
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 779c79904b1dada88873c742fd118e944658268c
+          path: exact-product
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build exact product before disconnect
+        working-directory: exact-product
+        run: |
+          set -e
+          test "$(git rev-parse HEAD)" = "$HS_PRODUCT_SHA"
+          npm ci --no-audit --no-fund
+          npm run build:offline
+          git diff --exit-code -- archive/source_bundle
+      - name: Install browser before disconnect
+        run: |
+          python -m venv .venv
+          .venv/bin/python -m pip install playwright==1.56.0
+          .venv/bin/python -m playwright install --with-deps chromium
+      - name: Isolated OS namespace cold boot (not host network changes)
+        run: |
+          set -e
+          cp tests/acceptance/fc02_os_offline.py exact-product/tests/acceptance/
+          sudo unshare --net -- bash -c '
+            set -e
+            ip link set lo up
+            exec runuser -u "$SUDO_USER" -- env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy HS_PRODUCT_SHA="$1" GITHUB_SHA="$2" HS_PRODUCT_DIR="$3" PLAYWRIGHT_BROWSERS_PATH="$4" "$5" "$3/tests/acceptance/fc02_os_offline.py"
+          ' _ "$HS_PRODUCT_SHA" "$GITHUB_SHA" "$PWD/exact-product" "$PLAYWRIGHT_BROWSERS_PATH" "$PWD/.venv/bin/python"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: HS-G0-FC02-OS-offline
+          path: exact-product/tests/fc02_offline_os/
+          retention-days: 3
+  composite:
+    if: ${{ ! github.event.repository.private }}
+    runs-on: windows-2025
+    timeout-minutes: 25
+    env:
+      HS_PRODUCT_SHA: 779c79904b1dada88873c742fd118e944658268c
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 779c79904b1dada88873c742fd118e944658268c
+          path: exact-product
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Build exact product
+        working-directory: exact-product
+        shell: pwsh
+        run: |
+          if ((git rev-parse HEAD) -ne $env:HS_PRODUCT_SHA) { throw 'SHA_MISMATCH' }
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { throw 'INSTALL_FAIL' }
+          npm run build:offline
+          if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAIL' }
+          git diff --exit-code -- archive/source_bundle
+      - name: Install diagnostic tools
+        run: |
+          python -m pip install playwright==1.56.0 pillow==11.3.0 numpy==2.2.6
+          python -m playwright install chromium
+      - name: Sample real composited DOM backgrounds
+        shell: pwsh
+        run: |
+          Copy-Item tests/acceptance/fc02_composite_qa.py exact-product/tests/acceptance/
+          python exact-product/tests/acceptance/fc02_composite_qa.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: HS-G0-FC02-composite-diagnostic
+          path: exact-product/tests/fc02_composite/
+          retention-days: 3
