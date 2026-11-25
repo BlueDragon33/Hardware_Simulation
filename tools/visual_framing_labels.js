@@ -1,6 +1,7 @@
 /* HS-G0-V01: generated Three.js view framing and label rail. Archive unchanged. */
 (() => {
 "use strict";
+if(window.__hsThreeReady!==true)return;
 const host=document.getElementById("viewport");
 if(!host||!window.THREE||!lab||!camera||!renderer)throw Error("V01: real Three.js scene missing");
 const parts=[["GPIO2","D2 / GPIO2",d2Anchor,pcb],["R1","R1 220Ω",res,res],["C1","C1 100µF",cap,cap],["OUT","NODE OUT",led,led]];

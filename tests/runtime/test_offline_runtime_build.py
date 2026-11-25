@@ -42,6 +42,11 @@ class OfflineRuntime(unittest.TestCase):
         bundle = OUT / "vendor" / "three-runtime.iife.js"
         self.assertGreater(bundle.stat().st_size, 200_000)
         self.assertTrue((OUT / "vendor" / "THREE-LICENSE.txt").is_file())
+        self.assertIn('type="application/x-hs-three-source"',html)
+        self.assertIn("vendor/three-runtime-bootstrap.js",html)
+        self.assertTrue((OUT / "vendor" / "three-runtime-bootstrap.js").is_file())
+        self.assertIn("window.__hsThreeReady=true",html)
+        self.assertIn("panel.dataset.pinId=o.userData.pinId",html)
         data = json.loads((OUT / "runtime-manifest.json").read_text(encoding="utf-8"))
         self.assertEqual(data["threeVersion"], "0.161.0")
         self.assertEqual(data["historicalSourceSha256"], EXPECTED)

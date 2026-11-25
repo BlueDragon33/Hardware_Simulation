@@ -147,6 +147,10 @@ def picking(browser,origin,w,h):
         snap(page,"pin_"+str(w))
         if row["selection"]["rayPin"]!=target["id"]:raise RuntimeError("Pointer did not hit expected pin at event; UNVERIFIED")
         if row["selection"]["selectedPin"]!=target["id"]:raise RuntimeError("Real pin ray hit but stable selected pin/inspector contract not observed")
+        assert page.locator(".inspector").get_attribute("data-pin-id")==target["id"]
+        assert target["id"] in page.locator("#inspectTitle").inner_text()
+        assert page.locator("#inspectVolt").inner_text()=="UNVERIFIED"
+        assert page.locator("#inspectState").inner_text()=="UNVERIFIED_CONTACT"
         assert not errors and not external and not failed
         row["status"]="PASS"
     except Exception as e:row["status"]="BLOCKED";row["exception"]=str(e);gap("pin_pick",{"viewport":[w,h],"detail":str(e)})
@@ -162,6 +166,18 @@ def failure(browser,origin,fault):
         row["renderReady"]=page.evaluate("() => !!window.__hsVisualQA")
         snap(page,"fault_"+fault)
         if row["renderReady"] or not any(re.search(r'WebGL|Three\.js|renderer|canvas|render|3D',x,re.I) and re.search(r'retry|reload|recover|khôi phục|tải lại|thử lại|quay lại',x,re.I) for x in row["visibleAlerts"]):raise RuntimeError("Explicit visible renderer failure/recovery contract not observed")
+        expected="WEBGL_UNAVAILABLE" if fault=="webgl" else "BUNDLE_MISSING"
+        alert=page.locator('[data-hs-runtime-error="'+expected+'"]')
+        assert alert.is_visible()
+        assert alert.get_by_role("button",name="Tải lại / Retry").is_enabled()
+        assert not errors, errors
+        assert not external
+        assert (fault=="bundle" and len(failed)==1 and failed[0].endswith("/vendor/three-runtime.iife.js")) or (fault=="webgl" and not failed)
+        # Remove injected fault by opening a fresh context; use actual fallback link
+        # in the failed context, then verify real renderer startup separately.
+        alert.get_by_role("link",name="Quay lại Local Runtime").click()
+        page.wait_for_url(origin+"/index.html")
+        assert page.locator("h1").is_visible()
         row["status"]="PASS"
     except Exception as e:row["status"]="BLOCKED";row["exception"]=str(e);gap("fault_"+fault,str(e))
     finally:row.update(errors=errors,external=external,failed=failed);record(row);ctx.close()
