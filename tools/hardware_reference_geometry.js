@@ -38,7 +38,7 @@ const hsP1 = (() => {
   }
   const metal=material(0xd0d8df,.32,.38),gold=material(0xe1b75a,.35,.42),
         black=material(0x353c45,.02,.72),pcbMat=material(0x25584d,.03,.68),
-        solder=material(0xaeb9c1,.34,.42),abs=material(0xe7e8e2,0,.81),
+        solder=material(0xaeb9c1,.34,.42),abs=new T.MeshLambertMaterial({color:0xe7e8e2,transparent:false}),
         socketDark=material(0x252a30,.12,.72);
   const esp=new T.Group();esp.position.set(-4.7,.05,0);lab.add(esp);
   const pcb=selectable(new T.Group(),'ESP32 DevKit V1 · Reference','MCU board','GPIO2');esp.add(pcb);
