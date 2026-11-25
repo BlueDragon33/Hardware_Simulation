@@ -7,7 +7,7 @@ from playwright.sync_api import sync_playwright
 from fc02_gap_qa import Handler,SITES,SIZES,THREE,new_page
 OUT=Path(__file__).resolve().parents[2]/"tests"/"fc02_composite"
 OUT.mkdir(parents=True,exist_ok=True)
-report={"productSha":os.environ["HS_PRODUCT_SHA"],"qaSha":os.environ["GITHUB_SHA"],"rows":[],"gate":"BLOCKED","limitations":["DOM text bounds sampled conservatively, not canvas/silkscreen glyph measurements","Visible viewport and representative normal/engineering/focus/hover states only; offscreen, unsupported compositing, nontext not globally certified","Screenshots hide text fill only for background diagnostic, restore before leaving; actual scene continues rendering"]}
+report={"productSha":os.environ["HS_PRODUCT_SHA"],"qaSha":os.environ["GITHUB_SHA"],"rows":[],"gate":"BLOCKED","limitations":["DOM text bounds sampled conservatively, not canvas/silkscreen glyph measurements","Visible viewport and representative normal/engineering/focus/hover states only; offscreen, unsupported compositing, nontext not globally certified","Screenshots hide text fill only for background diagnostic, restore before leaving; actual scene continues rendering","Raw metric unchanged; native ranges and selects additionally classified as nontext or unresolved displayed text, not removed or passed"]}
 META=r"""() => {
  const out=[];
  const rgb=s=>{let m=s.match(/^rgba?\(([^)]+)\)$/);if(!m)return null;let v=m[1].split(',').map(Number);return v.length>=3&&v.every(Number.isFinite)?[v[0],v[1],v[2],v[3]??1]:null};
@@ -29,7 +29,7 @@ META=r"""() => {
   let large=parseFloat(s.fontSize)>=24||(parseFloat(s.fontSize)>=56/3&&Number(s.fontWeight)>=700);
   // Exclude visibly occluded/partly clipped ranges from certification, not from report.
   for(const r of rects){let x=(Math.max(0,r.left)+Math.min(innerWidth,r.right))/2,y=(Math.max(0,r.top)+Math.min(innerHeight,r.bottom))/2;let top=document.elementFromPoint(x,y);if(!top||!(e===top||e.contains(top)||top.contains(e)))reason.push('occlusion_or_pointer_passthrough');}
-  out.push({tag:e.tagName,id:e.id,classes:String(e.className).slice(0,150),text:str.join(' ').slice(0,80),fg:f,threshold:large?3:4.5,rects:rects.map(r=>[r.left,r.top,r.right,r.bottom]),reason:[...new Set(reason)]});
+  out.push({tag:e.tagName,inputType:e instanceof HTMLInputElement?e.type:null,selectedText:e instanceof HTMLSelectElement?e.selectedOptions[0]?.textContent:null,id:e.id,classes:String(e.className).slice(0,150),text:str.join(' ').slice(0,80),fg:f,threshold:large?3:4.5,rects:rects.map(r=>[r.left,r.top,r.right,r.bottom]),reason:[...new Set(reason)]});
  }
  return out;
 }"""
@@ -62,6 +62,11 @@ def measure(page,key,only=None):
                     bg=frame[y1:y2,x1:x2];ratio=(np.maximum(fg,bg)+.05)/(np.minimum(fg,bg)+.05)
                     val=float(ratio.min());worst=val if worst is None else min(worst,val);pixels+=ratio.size
         r.update(worstSampledRatio=worst,sampledPixels=pixels,result="UNVERIFIED" if worst is None else "SAMPLED_PASS" if worst>=r["threshold"] else "SAMPLED_FAIL")
+        # Preserve identical raw metric for comparison. These are not text glyphs:
+        # a native range is a meaningful nontext control, and select.value can be an
+        # internal key rather than rendered option text. Neither gets automatic PASS.
+        r["semanticStatus"]=("NON_TEXT_UNVERIFIED" if r.get("inputType")=="range" else
+            "SELECT_TEXT_UNVERIFIED" if r["tag"]=="SELECT" else r["result"])
     return rows
 def main():
     server=http.server.ThreadingHTTPServer(("127.0.0.1",0),Handler)

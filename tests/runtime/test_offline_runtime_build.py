@@ -36,6 +36,17 @@ class OfflineRuntime(unittest.TestCase):
                 else:
                     self.assertIn("<canvas", html)
 
+    def test_measured_contrast_style_owners(self):
+        for site in SITES:
+            with self.subTest(site=site):
+                html = (OUT / site / "index.html").read_text(encoding="utf-8")
+                self.assertIn("#12675f,#2857a5", html)
+        v5 = (OUT / SITES[0] / "index.html").read_text(encoding="utf-8")
+        self.assertIn("color:#e6f1ff;background:#101c2b;min-width:43px", v5)
+        self.assertIn(".bb-labels span{background:#f3f5f7}", v5)
+        css = (OUT / SITES[3] / "index.html").read_text(encoding="utf-8")
+        self.assertIn(".bbnum span{background:#f3f5f7}", css)
+
     def test_bundled_three_and_license_local(self):
         html = (OUT / "visual/3d_threejs_prototype/index.html").read_text(encoding="utf-8")
         self.assertIn("../../vendor/three-runtime.iife.js", html)

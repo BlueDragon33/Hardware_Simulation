@@ -10,13 +10,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      HS_PRODUCT_SHA: 779c79904b1dada88873c742fd118e944658268c
+      HS_PRODUCT_SHA: ${{ github.sha }}
       PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/pw-browsers
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          ref: 779c79904b1dada88873c742fd118e944658268c
+          ref: ${{ github.sha }}
           path: exact-product
       - uses: actions/setup-node@v4
         with:
@@ -57,12 +57,12 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 25
     env:
-      HS_PRODUCT_SHA: 779c79904b1dada88873c742fd118e944658268c
+      HS_PRODUCT_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
         with:
-          ref: 779c79904b1dada88873c742fd118e944658268c
+          ref: ${{ github.sha }}
           path: exact-product
       - uses: actions/setup-node@v4
         with:
@@ -80,6 +80,8 @@ jobs:
           npm run build:offline
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAIL' }
           git diff --exit-code -- archive/source_bundle
+          python -m unittest discover -s tests/runtime -p "test_offline_runtime_build.py" -v
+          if ($LASTEXITCODE -ne 0) { throw 'RUNTIME_TEST_FAIL' }
       - name: Install diagnostic tools
         run: |
           python -m pip install playwright==1.56.0 pillow==11.3.0 numpy==2.2.6
@@ -89,9 +91,14 @@ jobs:
         run: |
           Copy-Item tests/acceptance/fc02_composite_qa.py exact-product/tests/acceptance/
           python exact-product/tests/acceptance/fc02_composite_qa.py
+      - name: Affected visual layout regression
+        if: ${{ !cancelled() }}
+        run: python exact-product/tests/acceptance/visual_p0_qa.py
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: HS-G0-FC02-composite-diagnostic
-          path: exact-product/tests/fc02_composite/
+          path: |
+            exact-product/tests/fc02_composite/
+            exact-product/tests/visual_output/
           retention-days: 3

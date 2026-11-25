@@ -132,6 +132,28 @@ def patch_three_startup_and_picking(html):
     return html
 
 
+def patch_observed_contrast(html, site):
+    # FC02 actual Windows Chromium composited measurements, artifact 15044044689.
+    # Modify original style owners in generated HTML; no geometry or logic changes.
+    palettes = {
+        "prototypes/v5_mna_solver": [("#1c9085,#407ce8", "#12675f,#2857a5")],
+        "visual/3d_offline_prototype": [("#1b9185,#407de9", "#12675f,#2857a5"), ("#1c9185,#407ce8", "#12675f,#2857a5")],
+        "visual/3d_threejs_prototype": [("#1b9185,#407de9", "#12675f,#2857a5"), ("#1c9185,#407ce8", "#12675f,#2857a5")],
+        "visual/visual_prototype_1": [("#188f84,#3d7be9", "#12675f,#2857a5")],
+    }
+    for old, new in palettes[site]:
+        html = replace_once(html, old, new, "primary/active contrast")
+    if site == "prototypes/v5_mna_solver":
+        html = replace_once(html, ".pname{font-size:8px;color:#a9b8cb;min-width:43px}",
+            ".pname{font-size:8px;color:#e6f1ff;background:#101c2b;min-width:43px}", "pin name foreground/background")
+        html = replace_once(html, "font-size:8px;color:#515963}", 
+            "font-size:8px;color:#343e49}.bb-labels span{background:#f3f5f7}", "breadboard row foreground/background")
+    elif site == "visual/visual_prototype_1":
+        html = replace_once(html, "font-size:7px;color:#838990}",
+            "font-size:7px;color:#343e49}.bbnum span{background:#f3f5f7}", "CSS board number foreground/background")
+    return html
+
+
 def main():
     if not ZIP.exists():
         raise SystemExit("BLOCKED: rebuild_sources.py must restore pinned ZIP first")
@@ -176,6 +198,7 @@ def main():
                 "font-size:8px;color:#515963", "breadboard row-label contrast")
         elif OLD_CDN in html:
             raise SystemExit("BLOCKED: unexpected remote Three.js dependency in " + site)
+        html = patch_observed_contrast(html, site)
         if html.count("</head>") != 1 or html.count("</body>") != 1:
             raise SystemExit("BLOCKED: malformed runtime HTML: " + site)
         html = html.replace("</head>", MOBILE_CSS + "\n</head>")
