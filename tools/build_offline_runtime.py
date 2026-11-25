@@ -148,6 +148,23 @@ def patch_observed_contrast(html, site):
             ".pname{font-size:8px;color:#e6f1ff;background:#101c2b;min-width:43px}", "pin name foreground/background")
         html = replace_once(html, "font-size:8px;color:#515963}", 
             "font-size:8px;color:#343e49}.bb-labels span{background:#f3f5f7}", "breadboard row foreground/background")
+        # Keep actual wire SVG and every endpoint in place. Only labels participate
+        # above that pointer-transparent layer; board bodies remain underneath it.
+        html = replace_once(html, "inset 0 0 0 2px #090d12;z-index:18}",
+            "inset 0 0 0 2px #090d12;z-index:auto}", "V5 board label stacking context")
+        html = replace_once(html, "inset 0 0 20px rgba(0,0,0,.12);z-index:10}",
+            "inset 0 0 20px rgba(0,0,0,.12);z-index:auto}", "V5 breadboard label stacking context")
+        html = replace_once(html, "color:#e6f1ff;background:#101c2b;min-width:43px}",
+            "color:#e6f1ff;background:#101c2b;min-width:43px;position:relative;z-index:21}", "V5 visible pin labels")
+        html = replace_once(html, ".bb-labels span{background:#f3f5f7}",
+            ".bb-labels span{background:#f3f5f7;position:relative;z-index:21;align-self:start}", "V5 visible row labels")
+        html = replace_once(html, "font-size:10px;color:#515963;letter-spacing:1px}",
+            "font-size:10px;color:#343e49;background:#f3f5f7;letter-spacing:1px;z-index:21}", "V5 readable board title")
+        html = replace_once(html, '.stage{min-height:680px}.breadboard{left:280px}',
+            '.stage{min-height:680px;min-width:0;overflow-x:auto}.bench{min-width:780px}.breadboard{left:280px}', "V5 narrow viewport spatial scroll")
+        html = replace_once(html, '<div class="stage">', 
+            '<div class="stage" tabindex="0" role="region" aria-label="Bàn lab; cuộn ngang để xem toàn bộ breadboard">', "V5 keyboard scroll region")
+
     elif site == "visual/visual_prototype_1":
         html = replace_once(html, "font-size:7px;color:#838990}",
             "font-size:7px;color:#343e49}.bbnum span{background:#f3f5f7}", "CSS board number foreground/background")

@@ -42,8 +42,11 @@ class OfflineRuntime(unittest.TestCase):
                 html = (OUT / site / "index.html").read_text(encoding="utf-8")
                 self.assertIn("#12675f,#2857a5", html)
         v5 = (OUT / SITES[0] / "index.html").read_text(encoding="utf-8")
-        self.assertIn("color:#e6f1ff;background:#101c2b;min-width:43px", v5)
-        self.assertIn(".bb-labels span{background:#f3f5f7}", v5)
+        self.assertIn("color:#e6f1ff;background:#101c2b;min-width:43px;position:relative;z-index:21", v5)
+        self.assertIn(".bb-labels span{background:#f3f5f7;position:relative;z-index:21;align-self:start}", v5)
+        self.assertIn(".bench{min-width:780px}", v5)
+        self.assertIn('class="stage" tabindex="0" role="region"', v5)
+        self.assertIn("pointer-events:none;z-index:20", v5)
         css = (OUT / SITES[3] / "index.html").read_text(encoding="utf-8")
         self.assertIn(".bbnum span{background:#f3f5f7}", css)
 
