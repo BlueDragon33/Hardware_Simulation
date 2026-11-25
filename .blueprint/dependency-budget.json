@@ -18,7 +18,10 @@
       "purpose": "Circuit, GPIO/PWM/ADC/sensor simulation and engineering workflows",
       "dataBoundary": "local project/runtime",
       "offlineBehavior": "Core simulation remains usable offline",
-      "exitPath": "Portable project/netlist/config formats"
+      "exitPath": "Portable project/netlist/config formats",
+      "owner": "Hardware_Simulation",
+      "status": "PLANNED_UNVERIFIED",
+      "removalTrigger": "Superseded by verified compatible local core"
     },
     {
       "id": "unity-or-remote-renderer",
@@ -27,7 +30,10 @@
       "purpose": "Optional high-quality visualization/rendering path",
       "dataBoundary": "Scene/model exports only",
       "offlineBehavior": "Simulation engine remains usable without renderer",
-      "exitPath": "Renderer remains downstream of portable simulation state"
+      "exitPath": "Renderer remains downstream of portable simulation state",
+      "owner": "Hardware_Simulation",
+      "status": "OPTIONAL_NOT_REQUIRED",
+      "removalTrigger": "No demonstrated need or acceptable substitute"
     },
     {
       "id": "google-drive-or-equivalent",
@@ -36,7 +42,10 @@
       "purpose": "Optional project backup/export archive",
       "dataBoundary": "Portable project artifacts only",
       "offlineBehavior": "No effect on simulation correctness",
-      "exitPath": "Ordinary files can be copied to another provider"
+      "exitPath": "Ordinary files can be copied to another provider",
+      "owner": "Hardware_Simulation",
+      "status": "OPTIONAL_NOT_REQUIRED",
+      "removalTrigger": "No demonstrated need or acceptable substitute"
     },
     {
       "id": "ai-provider",
@@ -45,7 +54,88 @@
       "purpose": "Optional explanation/code/design assistance",
       "dataBoundary": "Explicitly supplied project context only",
       "offlineBehavior": "Simulation and project editing remain usable",
-      "exitPath": "Provider replaceable"
+      "exitPath": "Provider replaceable",
+      "owner": "Hardware_Simulation",
+      "status": "OPTIONAL_NOT_REQUIRED",
+      "removalTrigger": "No demonstrated need or acceptable substitute"
+    },
+    {
+      "id": "three",
+      "class": "LOCAL_CORE",
+      "version": "0.161.0",
+      "owner": "Hardware_Simulation",
+      "costClass": "zero-spend",
+      "purpose": "Local WebGL visual adapter",
+      "dataBoundary": "Browser scene; no remote calls",
+      "offlineBehavior": "Bundled local after build",
+      "exitPath": "Replace adapter via stable pin/scene contract",
+      "removalTrigger": "Measured renderer inadequacy",
+      "status": "OBSERVED_SCOPED"
+    },
+    {
+      "id": "esbuild",
+      "class": "BUILD_ONLY",
+      "version": "0.24.2",
+      "owner": "Hardware_Simulation",
+      "costClass": "zero-spend",
+      "purpose": "Generate local vendor bundle",
+      "dataBoundary": "Source on build machine",
+      "offlineBehavior": "Installed build tool needed, not browser",
+      "exitPath": "Compatible local bundler",
+      "removalTrigger": "Bundler obsolete or replacement verified",
+      "status": "OBSERVED_SCOPED"
+    },
+    {
+      "id": "node",
+      "class": "BUILD_ONLY",
+      "version": "22",
+      "owner": "Hardware_Simulation",
+      "costClass": "zero-spend",
+      "purpose": "Pinned npm install/build",
+      "dataBoundary": "Local source",
+      "offlineBehavior": "Existing installation; not runtime",
+      "exitPath": "Compatible Node version",
+      "removalTrigger": "Toolchain migration",
+      "status": "OBSERVED_SCOPED"
+    },
+    {
+      "id": "python",
+      "class": "BUILD_QA_ONLY",
+      "version": "3.11+",
+      "owner": "Hardware_Simulation",
+      "costClass": "zero-spend",
+      "purpose": "Archive restore/build and QA",
+      "dataBoundary": "Local source/evidence",
+      "offlineBehavior": "Existing installation; localhost server",
+      "exitPath": "Compatible local toolchain",
+      "removalTrigger": "Verified replacement",
+      "status": "OBSERVED_SCOPED"
+    },
+    {
+      "id": "playwright-chromium",
+      "class": "QA_ONLY",
+      "version": "1.56.0 / Chromium 141 observed",
+      "owner": "Hardware_Simulation",
+      "costClass": "zero-spend",
+      "purpose": "Real browser acceptance",
+      "dataBoundary": "Local test runtime, public runner artifacts",
+      "offlineBehavior": "Browser/runtime installed once; loopback only",
+      "exitPath": "Compatible real-browser harness",
+      "removalTrigger": "Verified replacement",
+      "status": "OBSERVED_SCOPED"
+    },
+    {
+      "id": "github-actions",
+      "class": "QA_ONLY",
+      "version": "windows-2025 public runner",
+      "owner": "Hardware_Simulation",
+      "costClass": "zero-spend",
+      "purpose": "Exact SHA remote QA where local browser blocked",
+      "dataBoundary": "Public source/test evidence only",
+      "offlineBehavior": "Not required for local runtime",
+      "exitPath": "Local Windows/Chromium QA",
+      "removalTrigger": "Local execution available; private billing forbidden",
+      "status": "OBSERVED_SCOPED"
     }
   ],
   "forbidden": [

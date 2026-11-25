@@ -88,6 +88,50 @@ MOBILE_SCRIPT = """
 </script>
 """
 
+def replace_once(html, old, new, reason):
+    if html.count(old) != 1:
+        raise SystemExit("BLOCKED: unexpected historical " + reason + " boundary")
+    return html.replace(old, new, 1)
+
+
+def patch_three_startup_and_picking(html):
+    # Keep the classic script global lexical scope and exact render loop.
+    # Run it only after the one real renderer instance is successfully created.
+    html = replace_once(html, '<script>\nconst codeSample=',
+        '<script type="application/x-hs-three-source" id="hsThreeSource">\nconst codeSample=', "Three startup")
+    html = replace_once(html,
+        'const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});',
+        'const renderer=window.__hsThreeRenderer;delete window.__hsThreeRenderer;', "renderer initialization")
+    html = replace_once(html, "requestAnimationFrame(animate);\nlog('3D Lab sẵn sàng.",
+        "requestAnimationFrame(animate);\nwindow.__hsThreeReady=true;\nlog('3D Lab sẵn sàng.", "Three readiness")
+    html = replace_once(html, "  if(!o)return;\n  let p=o.object;",
+        """  if(!o)return;
+  const header=pcb.getObjectByName('30-pin header');
+  if(o.object===header && Number.isInteger(o.instanceId)){
+    const pinId=header.userData.instanceIds[o.instanceId];
+    if(typeof pinId==='string'){
+      selectedObject=Object.freeze({userData:Object.freeze({pinId,title:'ESP32 · '+pinId,type:'Header pin · REFERENCE_ONLY',node:pinId==='D2'?'D2 / GPIO2 (reference)':pinId+' (reference)'})});
+      showInspect(selectedObject);return;
+    }
+  }
+  let p=o.object;""", "pin hit selection")
+    html = replace_once(html, "function showInspect(o){\n",
+        """function showInspect(o){
+  const panel=document.querySelector('.inspector');
+  if(o.userData.pinId){
+    panel.dataset.pinId=o.userData.pinId;
+    document.getElementById('inspectTitle').textContent=o.userData.title;
+    document.getElementById('inspectType').textContent=o.userData.type;
+    document.getElementById('inspectNode').textContent=o.userData.node;
+    document.getElementById('inspectVolt').textContent='UNVERIFIED';
+    document.getElementById('inspectState').textContent='UNVERIFIED_CONTACT';
+    return;
+  }
+  delete panel.dataset.pinId;
+""", "pin inspector projection")
+    return html
+
+
 def main():
     if not ZIP.exists():
         raise SystemExit("BLOCKED: rebuild_sources.py must restore pinned ZIP first")
@@ -124,6 +168,12 @@ def main():
             if "</script" in p1.lower():
                 raise SystemExit("BLOCKED: invalid P1 visual source")
             html = html[:lo] + p1 + "\n\n" + html[hi:]
+            html = patch_three_startup_and_picking(html)
+        elif site == "prototypes/v5_mna_solver":
+            html = replace_once(html, "font-size:10px;color:#777;letter-spacing:1px",
+                "font-size:10px;color:#515963;letter-spacing:1px", "breadboard title contrast")
+            html = replace_once(html, "font-size:8px;color:#72777e",
+                "font-size:8px;color:#515963", "breadboard row-label contrast")
         elif OLD_CDN in html:
             raise SystemExit("BLOCKED: unexpected remote Three.js dependency in " + site)
         if html.count("</head>") != 1 or html.count("</body>") != 1:
@@ -143,11 +193,14 @@ def main():
             '<script src="../../vendor/visual-framing-labels.js"></script>'
             if site == "visual/3d_threejs_prototype" else ""
         )
-        html = html.replace("</body>", MOBILE_SCRIPT + "\n" + camera_tag + "\n" + visual_tag + "\n</body>")
+        bootstrap_tag = ('<script src="../../vendor/three-runtime-bootstrap.js"></script>'
+                         if site == "visual/3d_threejs_prototype" else "")
+        html = html.replace("</body>", bootstrap_tag + "\n" + MOBILE_SCRIPT + "\n" + camera_tag + "\n" + visual_tag + "\n</body>")
         (target / "index.html").write_text(html, encoding="utf-8")
         emitted.append(site + "/index.html")
     vendor_dir = DIST / "vendor"
     vendor_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(ROOT / "tools" / "three_runtime_bootstrap.js", vendor_dir / "three-runtime-bootstrap.js")
     shutil.copyfile(ROOT / "tools" / "keyboard_camera.js", vendor_dir / "keyboard-camera.js")
     shutil.copyfile(ROOT / "tools" / "visual_framing_labels.js", vendor_dir / "visual-framing-labels.js")
     (DIST / "index.html").write_text(
@@ -170,6 +223,7 @@ def main():
         "keyboardCamera": "vendor/keyboard-camera.js",
         "keyboardCameraKinds": ["canvas", "three", "css"],
         "visualFraming": "vendor/visual-framing-labels.js",
+        "threeBootstrap": "vendor/three-runtime-bootstrap.js",
         "hardwareReference": "DOIT_30_PIN_REFERENCE_ONLY",
         "modelProvenance": "hardware-reference-provenance.json",
         "entrypoints": emitted,

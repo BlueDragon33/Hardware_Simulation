@@ -3,6 +3,7 @@
   "use strict";
   const kind=document.currentScript?.dataset.hsCameraKind;
   if(!["three","canvas","css"].includes(kind))return;
+  if(kind==="three" && window.__hsThreeReady!==true)return;
   const host=document.querySelector(".viewport");
   const surface=kind==="css"?host:document.getElementById("gl");
   if(!host||!surface)throw Error("HS-CAMERA: missing camera surface");

@@ -2,17 +2,17 @@
 
 ## Default now: Development Live Mode
 
-This repository is in the shared BlueDragon33 Development Live Mode.
+Historical shared policy, specialized for Hardware Simulation by ACTIVE Constitution 1.3.0: LOCAL_CORE, offline-local-only. Development Live Mode is NOT permission to configure a host or deploy. No online promotion without separate explicit authority.
 
 - `main` is the live development source when a live host is configured.
-- Use the dedicated lightweight **Live Development Deploy** path; do not require Preview promotion.
+- No Live Development Deploy is authorized for this repository; use local generated runtime and exact-revision Draft evidence.
 - Access defaults to **standalone/local-first**.
 - Application Management is optional coordination/launch/sync infrastructure, not a mandatory gate for opening the app.
-- Device approval, remote-admin authorization and central control are optional during active development.
+- Metadata-only contract; no protected device or remote-admin backend implemented. Any future protected integration must satisfy R11–R14 and migration gates.
 - The app must remain usable as a local web-app whenever its own runtime supports local execution.
 - Internet should mainly be needed for publishing, optional access-right lookup, synchronization and remote features.
 - Missing central-management connectivity must not prevent the core app from opening in standalone development mode.
-- Heavy CI, browser suites, integration gates and protected Production promotion remain manual during active development.
+- Required checks follow scoped acceptance and Constitution; no skipped mandatory evidence. Production is separately protected.
 - Never treat a skipped optional sync/management bridge as a failed local app.
 
 ## Application Management access switch
@@ -39,4 +39,4 @@ At release time:
 8. Record the release revision/version.
 9. Return to Development Live Mode unless instructed otherwise.
 
-The Release workflow must remain available even while Development Live Mode is the default.
+Release workflow is a future G7 requirement, not evidence of a current authorized deploy path.

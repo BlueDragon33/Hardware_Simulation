@@ -88,6 +88,46 @@ class ArchiveRestoration(unittest.TestCase):
         self.assertIn("Extraction target not empty", p.stderr)
         self.assertEqual((target / "keep.txt").read_text(), "important")
 
+    def test_exact_nonempty_restore_is_idempotent(self):
+        self.prepare(zip_bytes())
+        first = self.run_restorer()
+        self.assertEqual(first.returncode, 0, first.stderr)
+        target = self.root / "recovered_prototypes/sample/hello.txt"
+        stamp = target.stat().st_mtime_ns
+        second = self.run_restorer()
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertIn("REUSED: exact verified extraction", second.stdout)
+        self.assertEqual(target.stat().st_mtime_ns, stamp)
+        self.assertEqual(target.read_text(), "sample content")
+
+    def test_edited_extraction_rejected_without_overwrite(self):
+        self.prepare(zip_bytes())
+        self.assertEqual(self.run_restorer().returncode, 0)
+        target = self.root / "recovered_prototypes/sample/hello.txt"
+        target.write_text("edited content")
+        result = self.run_restorer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("refusing overwrite", result.stderr)
+        self.assertEqual(target.read_text(), "edited content")
+
+    def test_missing_extracted_file_rejected_without_repair(self):
+        self.prepare(zip_bytes())
+        self.assertEqual(self.run_restorer().returncode, 0)
+        target = self.root / "recovered_prototypes/sample/hello.txt"
+        target.unlink()
+        result = self.run_restorer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse(target.exists())
+
+    def test_extra_extracted_file_rejected_without_deletion(self):
+        self.prepare(zip_bytes())
+        self.assertEqual(self.run_restorer().returncode, 0)
+        target = self.root / "recovered_prototypes/sample/extra.txt"
+        target.write_text("preserve me")
+        result = self.run_restorer()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(target.read_text(), "preserve me")
+
 
 if __name__ == "__main__":
     unittest.main()
