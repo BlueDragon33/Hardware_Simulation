@@ -11,13 +11,13 @@ Xây dựng một **Virtual Hardware / Electronics Lab** cho ESP32 và các ph�
 - netlist và MNA circuit solver;
 - code editor / firmware workflow;
 - giao diện 3D trực quan;
-- về sau chuyển renderer chất lượng cao sang Unity, giữ engine mô phỏng làm backend.
+- Three.js là renderer hiện hành; Unity chỉ là adapter thay thế có điều kiện, giữ engine mô phỏng làm backend.
 
 ## Nguyên tắc lưu trữ
 
 Các phiên bản cũ được giữ nguyên để có thể đối chiếu, tái sử dụng hoặc lấy lại ý tưởng. Không xóa prototype chỉ vì giao diện chưa đạt yêu cầu.
 
-Các thư mục `prototypes/` chứa tiến trình V1–V5; `visual/` chứa các thử nghiệm 3D; `docs/` ghi lại hướng phát triển tiếp theo.
+Nguồn lịch sử nằm trong `archive/source_bundle/`; `tools/rebuild_sources.py` khôi phục vào `recovered_prototypes/`. Build tạo `runtime_dist/` chứa bốn entrypoint cục bộ. Xem `docs/HS-G0-001-OFFLINE-RUNTIME.md` và `docs/HARDWARE_SIMULATION_MASTER_PLAN.md`.
 
 
 ## Operational sovereignty
@@ -39,4 +39,4 @@ Canonical dependency posture: `.blueprint/dependency-budget.json`.
 
 - Chỉ xác nhận **source contracts** và CI theo đúng commit. Không đồng nhất biểu mẫu Hiến pháp với chứng cứ ứng dụng đã chạy offline.
 - Chính sách Blueprint OS mặc định **offline-local-only**; GitHub merge hoặc CI PASS không được tự publish online. Ngoại lệ Bơi Ếch không áp dụng cho repo này.
-- Bằng chứng các kiểm thử thực tế còn thiếu được ghi tại `docs/BLUEPRINT-13-SOURCE-ADOPTION-AUDIT.json`. Việc nghiệm thu chức năng, lưu/khôi phục và review vẫn phải thực hiện trước khi công nhận Product PASS.
+- Bằng chứng các kiểm thử thực tế còn thiếu được ghi tại `docs/BLUEPRINT-13-SOURCE-ADOPTION-AUDIT.json`. Hồ sơ này là snapshot source-level lịch sử; trạng thái hiện hành và phạm vi nghiệm thu được ghi tại Issue #4. Chưa có Product PASS.

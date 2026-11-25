@@ -30,7 +30,11 @@ class OfflineRuntime(unittest.TestCase):
                 self.assertIn("hs-g0-mobile-overlay-remediation", html)
                 self.assertIn("hs-g0-mobile-overlay-layout", html)
                 self.assertIn("side-inspector", html)
-                self.assertIn("<canvas", html if "visual_prototype_1" not in site else "<canvas")
+                if site == "visual/visual_prototype_1":
+                    self.assertIn('id="engineering"', html)
+                    self.assertIn("scene-wrap", html)
+                else:
+                    self.assertIn("<canvas", html)
 
     def test_bundled_three_and_license_local(self):
         html = (OUT / "visual/3d_threejs_prototype/index.html").read_text(encoding="utf-8")
