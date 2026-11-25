@@ -54,12 +54,52 @@ def restore():
         bad_member = z.testzip()
         if bad_member is not None:
             raise ValueError(f"ZIP CRC validation FAILED: {bad_member}")
+        if OUT.is_symlink() or EXTRACT_TO.is_symlink():
+            raise ValueError("Refusing symlink restore target")
         if OUT.exists() and OUT.read_bytes() != payload:
             raise ValueError(f"Existing ZIP differs; refusing overwrite: {OUT}")
         if EXTRACT_TO.exists() and any(EXTRACT_TO.iterdir()):
-            raise ValueError(f"Extraction target not empty; refusing overwrite: {EXTRACT_TO}")
+            # Idempotent retry is allowed ONLY for an exact verified extraction.
+            # Never replace, delete, or accept an extra/edited/missing file.
+            expected_files = {}
+            expected_dirs = set()
+            for m in members:
+                rel = Path(m.filename.replace("\\", "/"))
+                if m.is_dir():
+                    expected_dirs.add(rel)
+                else:
+                    if rel in expected_files:
+                        raise ValueError("Duplicate archive member; refusing reuse")
+                    expected_files[rel] = m
+                expected_dirs.update(p for p in rel.parents if p != Path("."))
+            actual_files = set()
+            actual_dirs = set()
+            matches = True
+            for current in EXTRACT_TO.rglob("*"):
+                rel = current.relative_to(EXTRACT_TO)
+                if current.is_symlink() or getattr(current, "is_junction", lambda: False)():
+                    matches = False
+                    break
+                if current.is_dir():
+                    actual_dirs.add(rel)
+                elif current.is_file():
+                    actual_files.add(rel)
+                    m = expected_files.get(rel)
+                    if m is None or current.stat().st_size != m.file_size or current.read_bytes() != z.read(m):
+                        matches = False
+                        break
+                else:
+                    matches = False
+                    break
+            if not matches or actual_files != set(expected_files) or actual_dirs != expected_dirs:
+                raise ValueError(f"Extraction target not empty or differs; refusing overwrite: {EXTRACT_TO}")
+            if not OUT.exists():
+                OUT.write_bytes(payload)
+            print("REUSED: exact verified extraction; no extracted files rewritten")
+            return observed, len(members)
         OUT.parent.mkdir(parents=True, exist_ok=True)
-        OUT.write_bytes(payload)
+        if not OUT.exists():
+            OUT.write_bytes(payload)
         EXTRACT_TO.mkdir(parents=True, exist_ok=True)
         z.extractall(EXTRACT_TO)
     return observed, len(members)

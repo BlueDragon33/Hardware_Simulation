@@ -29,8 +29,13 @@ jobs:
           npm run build:offline
           if ($LASTEXITCODE -ne 0) { throw 'BUILD_FAIL' }
           git diff --exit-code -- archive/source_bundle
-      - name: Verify changed CSS assertion and archive recovery
-        run: python -m unittest discover -s tests/runtime -p 'test_offline_runtime_build.py' -v
+      - name: Verify archive recovery and changed CSS assertion
+        shell: pwsh
+        run: |
+          python -m unittest discover -s tests/archive -p 'test_*.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'ARCHIVE_TEST_FAIL' }
+          python -m unittest discover -s tests/runtime -p 'test_offline_runtime_build.py' -v
+          if ($LASTEXITCODE -ne 0) { throw 'RUNTIME_TEST_FAIL' }
       - name: Recover intentionally incomplete generated output
         shell: pwsh
         run: |
